@@ -1,0 +1,5 @@
+# rally-point
+
+## License
+
+MIT
