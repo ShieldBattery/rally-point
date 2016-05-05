@@ -4,7 +4,10 @@
   "description": "A server for forwarding Starcraft: Brood War game packets between clients.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "autotest": "mocha --watch -R spec --compilers js:babel-register --recursive test/",
+    "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
+    "posttest": "npm run lint",
+    "test": "mocha -R spec --compilers js:babel-register --recursive test/"
   },
   "repository": {
     "type": "git",
@@ -33,7 +36,9 @@
   },
   "devDependencies": {
     "babel-eslint": "^6.0.2",
+    "chai": "^3.5.0",
     "eslint": "^2.8.0",
-    "eslint-plugin-babel": "^3.2.0"
+    "eslint-plugin-babel": "^3.2.0",
+    "mocha": "^2.4.5"
   }
 }
