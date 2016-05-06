@@ -89,7 +89,7 @@ class Server {
     this.secret = secret
 
     this.socket = dgram.createSocket('udp6')
-    this.protocolHandler = new ProtocolHandler((msg, offset, length, port, address) =>
+    this.protocolHandler = new ProtocolHandler(secret, (msg, offset, length, port, address) =>
         this.socket.send(msg, offset, length, port, address))
     this.socket.on('message', (msg, rinfo) => this.protocolHandler.onMessage(msg, rinfo))
   }
