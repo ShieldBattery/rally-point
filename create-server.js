@@ -50,6 +50,11 @@ export class ProtocolHandler {
   }
 
   cleanup() {
+    for (const route of this.routes.values()) {
+      if (route.createSuccessAckTimeout) {
+        clearTimeout(route.createSuccessAckTimeout)
+      }
+    }
     this.routes.clear()
   }
 
