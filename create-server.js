@@ -1,14 +1,31 @@
 import dgram from 'dgram'
-import crypto from 'crypto'
 import {
   CreateRoute,
   CreateRouteSuccess,
+  CreateRouteSuccessAck,
   MSG_CREATE_ROUTE,
+  MSG_CREATE_ROUTE_SUCCESS_ACK,
 } from './packets'
 import genId from './gen-id'
 
+
+class Route {
+  constructor(id, creatorRinfo, playerOne, playerTwo) {
+    this.id = id
+    this.creatorRinfo = creatorRinfo
+    this.playerOne = playerOne
+    this.playerTwo = playerTwo
+
+    this.playerOneConnected = false
+    this.playerTwoConnected = false
+
+    this.createSuccessAckTimeout = null
+  }
+}
+
 export class ProtocolHandler {
   static ACK_TIMEOUT = 1000;
+  static MAX_ACKS = 5;
 
   // sendFn is function(msg, offset, length, port, address)
   constructor(secret, sendFn) {
@@ -25,6 +42,9 @@ export class ProtocolHandler {
     switch (type) {
       case MSG_CREATE_ROUTE:
         this._onCreateRoute(msg, rinfo)
+        break
+      case MSG_CREATE_ROUTE_SUCCESS_ACK:
+        this._onCreateRouteSuccessAck(msg, rinfo)
         break
     }
   }
@@ -50,29 +70,42 @@ export class ProtocolHandler {
       return
     }
 
-    const route = {
-      id: genId(),
-      playerOne,
-      playerTwo,
-    }
+    const route = new Route(genId(), rinfo, playerOne, playerTwo)
     this.routes.set(route.id, route)
 
     const response = CreateRouteSuccess.create(playerOne, playerTwo, route.id)
-    this.send(response, 0, response.length, rinfo.port, rinfo.address)
-  }
-
-  _verifySignature(msg, signature) {
-    const expected = crypto.createHmac('sha256', this.secret).update(msg).digest()
-    let matching = true
-    // don't break early here to avoid exposing when the signature mismatched via timing
-    for (let i = 0; i < expected.length; i++) {
-      if (expected[i] !== signature[i]) {
-        matching = false
+    let tries = 0
+    const send = () => {
+      if (tries < ProtocolHandler.MAX_ACKS) {
+        tries++
+        this.send(response, 0, response.length, rinfo.port, rinfo.address)
+        route.createSuccessAckTimeout = setTimeout(send, ProtocolHandler.ACK_TIMEOUT)
+      } else {
+        this.routes.delete(route.id)
       }
     }
-    return matching
+    send()
+  }
+
+  _onCreateRouteSuccessAck(msg, rinfo) {
+    if (!CreateRouteSuccessAck.validate(msg)) {
+      return
+    }
+
+    const routeId = CreateRouteSuccessAck.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      return
+    }
+    const route = this.routes.get(routeId)
+    if (route.creatorRinfo.port !== rinfo.port || route.creatorRinfo.address !== rinfo.address) {
+      return
+    }
+
+    clearTimeout(route.createSuccessAckTimeout)
+    route.createSuccessAckTimeout = null
   }
 }
+
 
 class Server {
   constructor(host, port, secret) {

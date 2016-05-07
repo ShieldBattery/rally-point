@@ -60,4 +60,49 @@ describe('ProtocolHandler', () => {
     // Expect no more messages to have been sent
     expect(sent).to.have.lengthOf(1)
   })
+
+  it('should re-send route setup success until an ack is received', async () => {
+    const msg = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    await ackTimeout()
+
+    // Expect some repeat messages
+    expect(sent).to.have.length.above(1)
+    expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_SUCCESS)
+    expect(CreateRouteSuccess.getRouteId(response.msg))
+      .to.eql(CreateRouteSuccess.getRouteId(sent[1].msg))
+    const lastSentCount = sent.length
+
+    const routeId = CreateRouteSuccess.getRouteId(response.msg)
+    const ack = CreateRouteSuccessAck.create(routeId)
+
+    handler.onMessage(ack, CREATOR_RINFO)
+    await ackTimeout()
+
+    expect(sent).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should give up on successfully created route if no ack is received', async () => {
+    const msg = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    await ackTimeout(ProtocolHandler.MAX_ACKS + 1)
+
+    // Expect some repeat messages
+    expect(sent).to.have.length.above(1)
+    expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_SUCCESS)
+    expect(CreateRouteSuccess.getRouteId(response.msg))
+      .to.eql(CreateRouteSuccess.getRouteId(sent[1].msg))
+    const lastSentCount = sent.length
+
+    await ackTimeout()
+    expect(sent).to.have.lengthOf(lastSentCount)
+  })
 })
