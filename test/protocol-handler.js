@@ -3,6 +3,8 @@ import {
   CreateRoute,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
+  MSG_CREATE_ROUTE,
+  MSG_CREATE_ROUTE_FAILURE,
   MSG_CREATE_ROUTE_SUCCESS,
 } from '../packets'
 
@@ -104,5 +106,34 @@ describe('ProtocolHandler', () => {
 
     await ackTimeout()
     expect(sent).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should ignore incorrectly sized route creation requests', async () => {
+    const msg = Buffer.allocUnsafe(1)
+    msg[0] = MSG_CREATE_ROUTE
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(0)
+  })
+
+  it('should reject route creation requests with invalid signatures', async () => {
+    const msg = CreateRoute.create('oh noes', 0x11111111, 0x22222222)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    expect(response.msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
+  })
+
+  it('should reject route creation requests with equal player ids', async () => {
+    const msg = CreateRoute.create(SECRET, 0x11111111, 0x11111111)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    expect(response.msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
   })
 })

@@ -1,6 +1,7 @@
 import dgram from 'dgram'
 import {
   CreateRoute,
+  CreateRouteFailure,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
   MSG_CREATE_ROUTE,
@@ -58,20 +59,25 @@ export class ProtocolHandler {
     this.routes.clear()
   }
 
+  _sendCreateFailure(msg, rinfo) {
+    const playerOne = CreateRoute.getPlayerOneId(msg)
+    const playerTwo = CreateRoute.getPlayerTwoId(msg)
+    const failureId = genId()
+    const response = CreateRouteFailure.create(playerOne, playerTwo, failureId)
+
+    this.send(response, 0, response.length, rinfo.port, rinfo.address)
+  }
+
   _onCreateRoute(msg, rinfo) {
     if (!CreateRoute.validate(msg)) {
-      // TODO(tec27): send failure
-      return
-    }
-    if (!CreateRoute.verifySignature(this.secret, msg)) {
-      // TODO(tec27): send failure
       return
     }
 
+    const validSignature = CreateRoute.verifySignature(this.secret, msg)
     const playerOne = CreateRoute.getPlayerOneId(msg)
     const playerTwo = CreateRoute.getPlayerTwoId(msg)
-    if (playerOne === playerTwo) {
-      // TODO(tec27): send failure
+    if (playerOne === playerTwo || !validSignature) {
+      this._sendCreateFailure(msg, rinfo)
       return
     }
 
