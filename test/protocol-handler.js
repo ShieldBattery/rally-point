@@ -1,23 +1,24 @@
 import { expect } from 'chai'
-import crypto from 'crypto'
 import {
-  MSG_CREATE_ROUTE,
-  LENGTH_MSG_CREATE_ROUTE,
+  CreateRoute,
+  CreateRouteSuccess,
+  CreateRouteSuccessAck,
   MSG_CREATE_ROUTE_SUCCESS,
-  LENGTH_MSG_CREATE_ROUTE_SUCCESS
-} from '../protocol-constants'
+} from '../packets'
 
 import { ProtocolHandler } from '../create-server'
 
 const SECRET = 'hell0w0rld'
-const SERVER_RINFO = {
+const CREATOR_RINFO = {
   address: '::1',
   port: 1337,
   family: 'IPv6',
 }
 
-function sign(buf) {
-  return crypto.createHmac('sha256', SECRET).update(buf).digest()
+ProtocolHandler.ACK_TIMEOUT = 1
+
+function ackTimeout(numTimeouts = 2) {
+  return new Promise(resolve => setTimeout(resolve, ProtocolHandler.ACK_TIMEOUT * numTimeouts))
 }
 
 describe('ProtocolHandler', () => {
@@ -36,21 +37,27 @@ describe('ProtocolHandler', () => {
     handler.cleanup()
   })
 
-  it('should handle route setup messages', () => {
-    const msg = Buffer.allocUnsafe(LENGTH_MSG_CREATE_ROUTE)
-    msg.writeUInt8(MSG_CREATE_ROUTE, 0)
-    msg.writeUInt32LE(0x11111111, 1)
-    msg.writeUInt32LE(0x22222222, 5)
-    const signature = sign(msg.slice(0, 1 + 4 + 4))
-    signature.copy(msg, 9)
+  it('should handle route setup happy case', async () => {
+    const msg = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
 
-    handler.onMessage(msg, SERVER_RINFO)
+    handler.onMessage(msg, CREATOR_RINFO)
 
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
-    expect(response.msg).to.have.lengthOf(LENGTH_MSG_CREATE_ROUTE_SUCCESS)
+    expect(CreateRouteSuccess.validate(response.msg)).to.be.true
     expect(response.msg[0]).to.eql(MSG_CREATE_ROUTE_SUCCESS)
-    expect(response.port).to.eql(SERVER_RINFO.port)
-    expect(response.address).to.eql(SERVER_RINFO.address)
+    expect(CreateRouteSuccess.getPlayerOneId(response.msg)).to.eql(0x11111111)
+    expect(CreateRouteSuccess.getPlayerTwoId(response.msg)).to.eql(0x22222222)
+    expect(response.port).to.eql(CREATOR_RINFO.port)
+    expect(response.address).to.eql(CREATOR_RINFO.address)
+
+    const routeId = CreateRouteSuccess.getRouteId(response.msg)
+    const ack = CreateRouteSuccessAck.create(routeId)
+
+    handler.onMessage(ack, CREATOR_RINFO)
+    await ackTimeout()
+
+    // Expect no more messages to have been sent
+    expect(sent).to.have.lengthOf(1)
   })
 })

@@ -1,16 +1,15 @@
 import dgram from 'dgram'
 import crypto from 'crypto'
 import {
+  CreateRoute,
+  CreateRouteSuccess,
   MSG_CREATE_ROUTE,
-  LENGTH_MSG_CREATE_ROUTE,
-  MSG_CREATE_ROUTE_SUCCESS,
-  LENGTH_MSG_CREATE_ROUTE_SUCCESS,
-  MSG_CREATE_ROUTE_SUCCESS_ACK,
-  MSG_CREATE_ROUTE_FAILURE_ACK,
-} from './protocol-constants'
+} from './packets'
 import genId from './gen-id'
 
 export class ProtocolHandler {
+  static ACK_TIMEOUT = 1000;
+
   // sendFn is function(msg, offset, length, port, address)
   constructor(secret, sendFn) {
     this.secret = secret
@@ -35,20 +34,17 @@ export class ProtocolHandler {
   }
 
   _onCreateRoute(msg, rinfo) {
-    if (msg.length !== LENGTH_MSG_CREATE_ROUTE) {
+    if (!CreateRoute.validate(msg)) {
+      // TODO(tec27): send failure
+      return
+    }
+    if (!CreateRoute.verifySignature(this.secret, msg)) {
       // TODO(tec27): send failure
       return
     }
 
-    const data = msg.slice(0, 1 + 4 + 4)
-    const signature = msg.slice(data.length)
-    if (!this._verifySignature(data, signature)) {
-      // TODO(tec27): send failure
-      return
-    }
-
-    const playerOne = msg.readUInt32LE(1)
-    const playerTwo = msg.readUInt32LE(5)
+    const playerOne = CreateRoute.getPlayerOneId(msg)
+    const playerTwo = CreateRoute.getPlayerTwoId(msg)
     if (playerOne === playerTwo) {
       // TODO(tec27): send failure
       return
@@ -61,11 +57,7 @@ export class ProtocolHandler {
     }
     this.routes.set(route.id, route)
 
-    const response = Buffer.allocUnsafe(LENGTH_MSG_CREATE_ROUTE_SUCCESS)
-    response.writeUInt8(MSG_CREATE_ROUTE_SUCCESS, 0)
-    response.writeUInt32LE(playerOne, 1)
-    response.writeUInt32LE(playerTwo, 5)
-    response.write(route.id, 9)
+    const response = CreateRouteSuccess.create(playerOne, playerTwo, route.id)
     this.send(response, 0, response.length, rinfo.port, rinfo.address)
   }
 
