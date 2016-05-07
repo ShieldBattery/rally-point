@@ -1,6 +1,8 @@
 import { expect } from 'chai'
 import {
   CreateRoute,
+  CreateRouteFailure,
+  CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
   MSG_CREATE_ROUTE,
@@ -135,5 +137,50 @@ describe('ProtocolHandler', () => {
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
     expect(response.msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
+  })
+
+  it('should re-send route creation failures until acked', async() => {
+    const msg = CreateRoute.create('oh noes', 0x11111111, 0x22222222)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    await ackTimeout()
+
+    // Expect some repeat messages
+    expect(sent).to.have.length.above(1)
+    expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
+    expect(CreateRouteFailure.getFailureId(response.msg))
+      .to.eql(CreateRouteFailure.getFailureId(sent[1].msg))
+    const lastSentCount = sent.length
+
+    const failureId = CreateRouteFailure.getFailureId(response.msg)
+    const ack = CreateRouteFailureAck.create(failureId)
+
+    handler.onMessage(ack, CREATOR_RINFO)
+    await ackTimeout()
+
+    expect(sent).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should give up on notifying of failed route creation if no ack is received', async () => {
+    const msg = CreateRoute.create('oh noes', 0x11111111, 0x22222222)
+
+    handler.onMessage(msg, CREATOR_RINFO)
+
+    expect(sent).to.have.lengthOf(1)
+    const response = sent[0]
+    await ackTimeout(ProtocolHandler.MAX_ACKS + 1)
+
+    // Expect some repeat messages
+    expect(sent).to.have.length.above(1)
+    expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
+    expect(CreateRouteFailure.getFailureId(response.msg))
+      .to.eql(CreateRouteFailure.getFailureId(sent[1].msg))
+    const lastSentCount = sent.length
+
+    await ackTimeout()
+    expect(sent).to.have.lengthOf(lastSentCount)
   })
 })

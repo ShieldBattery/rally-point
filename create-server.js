@@ -2,13 +2,14 @@ import dgram from 'dgram'
 import {
   CreateRoute,
   CreateRouteFailure,
+  CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
   MSG_CREATE_ROUTE,
+  MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
 } from './packets'
 import genId from './gen-id'
-
 
 class Route {
   constructor(id, creatorRinfo, playerOne, playerTwo) {
@@ -24,6 +25,15 @@ class Route {
   }
 }
 
+class Failure {
+  constructor(id, rinfo) {
+    this.id = id
+    this.rinfo = rinfo
+
+    this.ackTimeout = null
+  }
+}
+
 export class ProtocolHandler {
   static ACK_TIMEOUT = 1000;
   static MAX_ACKS = 5;
@@ -34,6 +44,7 @@ export class ProtocolHandler {
     this.send = sendFn
 
     this.routes = new Map()
+    this.failures = new Map()
   }
 
   onMessage(msg, rinfo) {
@@ -47,6 +58,9 @@ export class ProtocolHandler {
       case MSG_CREATE_ROUTE_SUCCESS_ACK:
         this._onCreateRouteSuccessAck(msg, rinfo)
         break
+      case MSG_CREATE_ROUTE_FAILURE_ACK:
+        this._onCreateRouteFailureAck(msg, rinfo)
+        break
     }
   }
 
@@ -57,15 +71,32 @@ export class ProtocolHandler {
       }
     }
     this.routes.clear()
+
+    for (const failure of this.failures.values()) {
+      clearTimeout(failure.ackTimeout)
+    }
+    this.failures.clear()
   }
 
   _sendCreateFailure(msg, rinfo) {
     const playerOne = CreateRoute.getPlayerOneId(msg)
     const playerTwo = CreateRoute.getPlayerTwoId(msg)
     const failureId = genId()
-    const response = CreateRouteFailure.create(playerOne, playerTwo, failureId)
+    const failure = new Failure(failureId, rinfo)
+    this.failures.set(failureId, failure)
 
-    this.send(response, 0, response.length, rinfo.port, rinfo.address)
+    const response = CreateRouteFailure.create(playerOne, playerTwo, failureId)
+    let tries = 0
+    const send = () => {
+      if (tries < ProtocolHandler.MAX_ACKS) {
+        tries++
+        this.send(response, 0, response.length, rinfo.port, rinfo.address)
+        failure.ackTimeout = setTimeout(send, ProtocolHandler.ACK_TIMEOUT)
+      } else {
+        this.failures.delete(failure.id)
+      }
+    }
+    send()
   }
 
   _onCreateRoute(msg, rinfo) {
@@ -114,6 +145,24 @@ export class ProtocolHandler {
 
     clearTimeout(route.createSuccessAckTimeout)
     route.createSuccessAckTimeout = null
+  }
+
+  _onCreateRouteFailureAck(msg, rinfo) {
+    if (!CreateRouteFailureAck.validate(msg)) {
+      return
+    }
+
+    const failureId = CreateRouteFailureAck.getFailureId(msg)
+    if (!this.failures.has(failureId)) {
+      return
+    }
+    const failure = this.failures.get(failureId)
+    if (failure.rinfo.port !== rinfo.port || failure.rinfo.address !== rinfo.address) {
+      return
+    }
+
+    clearTimeout(failure.ackTimeout)
+    this.failures.delete(failureId)
   }
 }
 

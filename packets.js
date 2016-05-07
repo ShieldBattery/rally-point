@@ -140,3 +140,20 @@ export const CreateRouteFailure = {
 // Intended to be sent from creators to rally-point.
 // Indicates that the creator has received notification that their request failed.
 export const MSG_CREATE_ROUTE_FAILURE_ACK = 0x04
+export const LENGTH_MSG_CREATE_ROUTE_FAILURE_ACK = 1 + 8 /* failure ID */
+export const CreateRouteFailureAck = {
+  create(failureId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_CREATE_ROUTE_FAILURE_ACK)
+    msg.writeUInt8(MSG_CREATE_ROUTE_FAILURE_ACK, 0)
+    msg.write(failureId, 1)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_CREATE_ROUTE_FAILURE_ACK
+  },
+
+  getFailureId(msg) {
+    return msg.toString('utf8', 1)
+  },
+}
