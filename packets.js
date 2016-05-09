@@ -157,3 +157,77 @@ export const CreateRouteFailureAck = {
     return msg.toString('utf8', 1)
   },
 }
+
+// Intended to be sent from players to rally-point
+// Indicates that the player wants to join a particular route ID (and set their connection as one of
+// the endpoints for it)
+export const MSG_JOIN_ROUTE = 0x05
+export const LENGTH_MSG_JOIN_ROUTE = 1 + 8 /* route ID */ + 4 /* player ID */
+export const JoinRoute = {
+  create(routeId, playerId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_JOIN_ROUTE)
+    msg.writeUInt8(MSG_JOIN_ROUTE, 0)
+    msg.write(routeId, 1)
+    msg.writeUInt32LE(playerId, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_JOIN_ROUTE
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getPlayerId(msg) {
+    return msg.readUInt32LE(9)
+  },
+}
+
+// Intended to be sent from rally-point to players
+// Indicates that the player has successfully joined the route requested
+export const MSG_JOIN_ROUTE_SUCCESS = 0x06
+export const LENGTH_MSG_JOIN_ROUTE_SUCCESS = 1 + 8 /* routeID */
+export const JoinRouteSuccess = {
+  create(routeId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_JOIN_ROUTE_SUCCESS)
+    msg.writeUInt8(MSG_JOIN_ROUTE_SUCCESS, 0)
+    msg.write(routeId, 1)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_JOIN_ROUTE_SUCCESS
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1)
+  }
+}
+
+// Intended to be sent from players to rally-point
+// Indicates that they've received notification that they've successfully joined the route
+export const MSG_JOIN_ROUTE_SUCCESS_ACK = 0x07
+export const LENGTH_MSG_JOIN_ROUTE_SUCCESS_ACK = 1 + 8 /* routeID */ + 4 /* playerID */
+export const JoinRouteSuccessAck = {
+  create(routeId, playerId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_JOIN_ROUTE_SUCCESS_ACK)
+    msg.writeUInt8(MSG_JOIN_ROUTE_SUCCESS_ACK, 0)
+    msg.write(routeId, 1)
+    msg.writeUInt32LE(playerId, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_JOIN_ROUTE_SUCCESS_ACK
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getPlayerId(msg) {
+    return msg.readUInt32LE(9)
+  },
+}

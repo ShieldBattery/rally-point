@@ -5,9 +5,12 @@ import {
   CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
+  JoinRoute,
+  JoinRouteSuccess,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
+  MSG_JOIN_ROUTE,
 } from './packets'
 import genId from './gen-id'
 
@@ -15,13 +18,36 @@ class Route {
   constructor(id, creatorRinfo, playerOne, playerTwo) {
     this.id = id
     this.creatorRinfo = creatorRinfo
-    this.playerOne = playerOne
-    this.playerTwo = playerTwo
-
-    this.playerOneConnected = false
-    this.playerTwoConnected = false
+    this.playerOneId = playerOne
+    this.playerOneEndpoint = null
+    this.playerTwoId = playerTwo
+    this.playerTwoEndpoint = null
 
     this.createSuccessAckTimeout = null
+  }
+
+  get playerOneConnected() {
+    return !!this.playerOneEndpoint
+  }
+
+  get playerTwoConnected() {
+    return !!this.playerTwoEndpoint
+  }
+
+  get connected() {
+    return this.playerOneConnected && this.playerTwoConnected
+  }
+
+  registerEndpoint(playerId, rinfo) {
+    if (this.playerOneId === playerId) {
+      this.playerOneEndpoint = rinfo
+    } else if (this.playerTwoId === playerId) {
+      this.playerTwoEndpoint = rinfo
+    } else {
+      return false
+    }
+
+    return true
   }
 }
 
@@ -52,6 +78,7 @@ export class ProtocolHandler {
 
     const type = msg.readUInt8(0)
     switch (type) {
+      // Creator messages
       case MSG_CREATE_ROUTE:
         this._onCreateRoute(msg, rinfo)
         break
@@ -60,6 +87,11 @@ export class ProtocolHandler {
         break
       case MSG_CREATE_ROUTE_FAILURE_ACK:
         this._onCreateRouteFailureAck(msg, rinfo)
+        break
+
+      // Player messages
+      case MSG_JOIN_ROUTE:
+        this._onJoinRoute(msg, rinfo)
         break
     }
   }
@@ -163,6 +195,33 @@ export class ProtocolHandler {
 
     clearTimeout(failure.ackTimeout)
     this.failures.delete(failureId)
+  }
+
+  _onJoinRoute(msg, rinfo) {
+    if (!JoinRoute.validate(msg)) {
+      return
+    }
+
+
+    const routeId = JoinRoute.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      // TODO(tec27): send failure
+      return
+    }
+    const playerId = JoinRoute.getPlayerId(msg)
+    const route = this.routes.get(routeId)
+    const wasConnected = route.connected
+    if (!route.registerEndpoint(playerId, rinfo)) {
+      // TODO(tec27): send failure
+      return
+    }
+
+    const response = JoinRouteSuccess.create(routeId)
+    this.send(response, 0, response.length, rinfo.port, rinfo.address)
+
+    if (!wasConnected && route.connected) {
+      // TODO(tec27): send route ready
+    }
   }
 }
 

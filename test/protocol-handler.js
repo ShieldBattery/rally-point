@@ -5,9 +5,13 @@ import {
   CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
+  JoinRoute,
+  JoinRouteSuccess,
+  JoinRouteSuccessAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE,
   MSG_CREATE_ROUTE_SUCCESS,
+  MSG_JOIN_ROUTE_SUCCESS,
 } from '../packets'
 
 import { ProtocolHandler } from '../create-server'
@@ -19,13 +23,13 @@ const CREATOR_RINFO = {
   family: 'IPv6',
 }
 
-ProtocolHandler.ACK_TIMEOUT = 1
+ProtocolHandler.ACK_TIMEOUT = 4
 
 function ackTimeout(numTimeouts = 2) {
   return new Promise(resolve => setTimeout(resolve, ProtocolHandler.ACK_TIMEOUT * numTimeouts))
 }
 
-describe('ProtocolHandler', () => {
+describe('ProtocolHandler - Creators', () => {
   let sent
   let handler
   beforeEach(() => {
@@ -182,5 +186,71 @@ describe('ProtocolHandler', () => {
 
     await ackTimeout()
     expect(sent).to.have.lengthOf(lastSentCount)
+  })
+})
+
+const P1_RINFO = {
+  address: '::ffff:10.0.0.1',
+  port: 3456,
+  family: 'IPv6',
+}
+const P2_RINFO = {
+  address: '::ffff:10.0.0.2',
+  port: 6543,
+  family: 'IPv6',
+}
+describe('ProtocolHandler - Players', () => {
+  let sent
+  let handler
+  let routeId
+
+  beforeEach(() => {
+    sent = {
+      p1: [],
+      p2: [],
+    }
+    handler = new ProtocolHandler(SECRET, (msg, offset, length, port, address) => {
+      const copied = Buffer.alloc(length)
+      msg.copy(copied, 0, offset, length)
+      if (port === P1_RINFO.port && address === P1_RINFO.address) {
+        sent.p1.push(copied)
+      } else if (port === P2_RINFO.port && address === P2_RINFO.address) {
+        sent.p2.push(copied)
+      } else if (port === CREATOR_RINFO.port && address === CREATOR_RINFO.address) {
+        if (msg[0] !== MSG_CREATE_ROUTE_SUCCESS) {
+          return
+        }
+        routeId = CreateRouteSuccess.getRouteId(msg)
+        const ack = CreateRouteSuccessAck.create(routeId)
+        handler.onMessage(ack, CREATOR_RINFO)
+      }
+    })
+
+    const create = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
+    handler.onMessage(create, CREATOR_RINFO)
+  })
+
+  afterEach(() => {
+    handler.cleanup()
+  })
+
+  it('should handle join route happy case', async () => {
+    const msg = JoinRoute.create(routeId, 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+    expect(JoinRouteSuccess.validate(response)).to.be.true
+    expect(response[0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
+    expect(JoinRouteSuccess.getRouteId(response)).to.eql(routeId)
+
+    const ack = JoinRouteSuccessAck.create(routeId, 0x11111111)
+
+    handler.onMessage(ack, P1_RINFO)
+    await ackTimeout()
+
+    // Expect no more messages to have been sent
+    expect(sent.p1).to.have.lengthOf(1)
   })
 })
