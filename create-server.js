@@ -7,12 +7,48 @@ import {
   CreateRouteSuccessAck,
   JoinRoute,
   JoinRouteSuccess,
+  JoinRouteSuccessAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
   MSG_JOIN_ROUTE,
+  MSG_JOIN_ROUTE_SUCCESS_ACK,
 } from './packets'
 import genId from './gen-id'
+
+class PacketResender {
+  constructor(timeout, maxResends, rinfo, packetData, sendFn, onFailure) {
+    this.timeout = timeout
+    this.maxResends = maxResends
+    this.rinfo = rinfo
+    this.packetData = packetData
+    this.send = sendFn
+    this.onFailure = onFailure
+
+    this.timerId = null
+    this.tries = 0
+
+    this._sendPacket()
+  }
+
+  _sendPacket() {
+    if (this.tries < this.maxResends) {
+      this.tries++
+      this.send(this.packetData, 0, this.packetData.length, this.rinfo.port, this.rinfo.address)
+      this.timerId = setTimeout(() => this._sendPacket(), this.timeout)
+    } else {
+      this.timerId = null
+      this.onFailure()
+    }
+  }
+
+  handleAck() {
+    if (!this.timerId) return
+
+    clearTimeout(this.timerId)
+    this.timerId = null
+  }
+}
 
 class Route {
   constructor(id, creatorRinfo, playerOne, playerTwo) {
@@ -23,7 +59,9 @@ class Route {
     this.playerTwoId = playerTwo
     this.playerTwoEndpoint = null
 
-    this.createSuccessAckTimeout = null
+    this.createResender = null
+    this.p1JoinResender = null
+    this.p2JoinResender = null
   }
 
   get playerOneConnected() {
@@ -41,28 +79,54 @@ class Route {
   registerEndpoint(playerId, rinfo) {
     if (this.playerOneId === playerId) {
       this.playerOneEndpoint = rinfo
+      return 1
     } else if (this.playerTwoId === playerId) {
       this.playerTwoEndpoint = rinfo
+      return 2
     } else {
-      return false
+      return 0
     }
+  }
 
-    return true
+  handleJoinSuccessAck(playerId, rinfo) {
+    if (this.playerOneId === playerId) {
+      if (this.playerOneEndpoint.port !== rinfo.port ||
+          this.playerOneEndpoint.address !== rinfo.address) {
+        return
+      }
+      if (this.p1JoinResender) {
+        this.p1JoinResender.handleAck()
+        this.p1JoinResender = null
+      }
+    } else if (this.playerTwoId === playerId) {
+      if (this.playerOneEndpoint.port !== rinfo.port ||
+          this.playerOneEndpoint.address !== rinfo.address) {
+        return
+      }
+      if (this.p2JoinResender) {
+        this.p2JoinResender.handleAck()
+        this.p2JoinResender = null
+      }
+    }
   }
 }
 
 class Failure {
-  constructor(id, rinfo) {
+  constructor(id, rinfo, timeout, maxResends, packetData, sendFn, onNoAck) {
     this.id = id
     this.rinfo = rinfo
 
-    this.ackTimeout = null
+    this.resender = new PacketResender(timeout, maxResends, rinfo, packetData, sendFn, onNoAck)
+  }
+
+  handleAck() {
+    this.resender.handleAck()
   }
 }
 
 export class ProtocolHandler {
   static ACK_TIMEOUT = 1000;
-  static MAX_ACKS = 5;
+  static MAX_RESENDS = 5;
 
   // sendFn is function(msg, offset, length, port, address)
   constructor(secret, sendFn) {
@@ -93,19 +157,28 @@ export class ProtocolHandler {
       case MSG_JOIN_ROUTE:
         this._onJoinRoute(msg, rinfo)
         break
+      case MSG_JOIN_ROUTE_SUCCESS_ACK:
+        this._onJoinRouteSuccessAck(msg, rinfo)
+        break
     }
   }
 
   cleanup() {
     for (const route of this.routes.values()) {
-      if (route.createSuccessAckTimeout) {
-        clearTimeout(route.createSuccessAckTimeout)
+      if (route.createResender) {
+        route.createResender.handleAck()
+      }
+      if (route.p1JoinResender) {
+        route.p1JoinResender.handleAck()
+      }
+      if (route.p2JoinResender) {
+        route.p2JoinResender.handleAck()
       }
     }
     this.routes.clear()
 
     for (const failure of this.failures.values()) {
-      clearTimeout(failure.ackTimeout)
+      failure.handleAck()
     }
     this.failures.clear()
   }
@@ -114,21 +187,10 @@ export class ProtocolHandler {
     const playerOne = CreateRoute.getPlayerOneId(msg)
     const playerTwo = CreateRoute.getPlayerTwoId(msg)
     const failureId = genId()
-    const failure = new Failure(failureId, rinfo)
-    this.failures.set(failureId, failure)
-
     const response = CreateRouteFailure.create(playerOne, playerTwo, failureId)
-    let tries = 0
-    const send = () => {
-      if (tries < ProtocolHandler.MAX_ACKS) {
-        tries++
-        this.send(response, 0, response.length, rinfo.port, rinfo.address)
-        failure.ackTimeout = setTimeout(send, ProtocolHandler.ACK_TIMEOUT)
-      } else {
-        this.failures.delete(failure.id)
-      }
-    }
-    send()
+    const failure = new Failure(failureId, rinfo, ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS, response, this.send, () => this.failures.delete(failureId))
+    this.failures.set(failureId, failure)
   }
 
   _onCreateRoute(msg, rinfo) {
@@ -148,17 +210,8 @@ export class ProtocolHandler {
     this.routes.set(route.id, route)
 
     const response = CreateRouteSuccess.create(playerOne, playerTwo, route.id)
-    let tries = 0
-    const send = () => {
-      if (tries < ProtocolHandler.MAX_ACKS) {
-        tries++
-        this.send(response, 0, response.length, rinfo.port, rinfo.address)
-        route.createSuccessAckTimeout = setTimeout(send, ProtocolHandler.ACK_TIMEOUT)
-      } else {
-        this.routes.delete(route.id)
-      }
-    }
-    send()
+    route.createResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS, rinfo, response, this.send, () => this.routes.delete(route.id))
   }
 
   _onCreateRouteSuccessAck(msg, rinfo) {
@@ -175,8 +228,10 @@ export class ProtocolHandler {
       return
     }
 
-    clearTimeout(route.createSuccessAckTimeout)
-    route.createSuccessAckTimeout = null
+    if (route.createResender) {
+      route.createResender.handleAck()
+    }
+    route.createResender = null
   }
 
   _onCreateRouteFailureAck(msg, rinfo) {
@@ -193,7 +248,7 @@ export class ProtocolHandler {
       return
     }
 
-    clearTimeout(failure.ackTimeout)
+    failure.handleAck()
     this.failures.delete(failureId)
   }
 
@@ -211,17 +266,38 @@ export class ProtocolHandler {
     const playerId = JoinRoute.getPlayerId(msg)
     const route = this.routes.get(routeId)
     const wasConnected = route.connected
-    if (!route.registerEndpoint(playerId, rinfo)) {
+    const playerNum = route.registerEndpoint(playerId, rinfo)
+    if (!playerNum) {
       // TODO(tec27): send failure
       return
     }
 
     const response = JoinRouteSuccess.create(routeId)
-    this.send(response, 0, response.length, rinfo.port, rinfo.address)
+    const resender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS, rinfo, response, this.send, () => {})
+    if (playerNum === 1) {
+      route.p1JoinResender = resender
+    } else {
+      route.p2JoinResender = resender
+    }
 
     if (!wasConnected && route.connected) {
       // TODO(tec27): send route ready
     }
+  }
+
+  _onJoinRouteSuccessAck(msg, rinfo) {
+    if (!JoinRouteSuccessAck.validate(msg)) {
+      return
+    }
+
+    const routeId = JoinRouteSuccessAck.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      return
+    }
+    const route = this.routes.get(routeId)
+    const playerId = JoinRouteSuccessAck.getPlayerId(msg)
+    route.handleJoinSuccessAck(playerId, rinfo)
   }
 }
 

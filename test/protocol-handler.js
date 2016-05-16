@@ -101,7 +101,7 @@ describe('ProtocolHandler - Creators', () => {
 
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
-    await ackTimeout(ProtocolHandler.MAX_ACKS + 1)
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
 
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
@@ -175,7 +175,7 @@ describe('ProtocolHandler - Creators', () => {
 
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
-    await ackTimeout(ProtocolHandler.MAX_ACKS + 1)
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
 
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
@@ -252,5 +252,28 @@ describe('ProtocolHandler - Players', () => {
 
     // Expect no more messages to have been sent
     expect(sent.p1).to.have.lengthOf(1)
+  })
+
+  it('should re-send join route success until ack is received', async () => {
+    const msg = JoinRoute.create(routeId, 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+    await ackTimeout()
+
+    // Expect some repeat messages
+    expect(sent.p1).to.have.length.above(1)
+    expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
+    expect(JoinRouteSuccess.getRouteId(response))
+      .to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
+    const lastSentCount = sent.p1.length
+
+    const ack = JoinRouteSuccessAck.create(routeId, 0x11111111)
+    handler.onMessage(ack, P1_RINFO)
+    await ackTimeout()
+
+    expect(sent.p1).to.have.lengthOf(lastSentCount)
   })
 })
