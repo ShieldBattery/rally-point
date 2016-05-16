@@ -27,26 +27,36 @@ class PacketResender {
 
     this.timerId = null
     this.tries = 0
-
-    this._sendPacket()
+    this.done = false
   }
 
   _sendPacket() {
+    this.timerId = null
+    if (this.done) return
+
     if (this.tries < this.maxResends) {
       this.tries++
       this.send(this.packetData, 0, this.packetData.length, this.rinfo.port, this.rinfo.address)
       this.timerId = setTimeout(() => this._sendPacket(), this.timeout)
     } else {
-      this.timerId = null
+      this.done = true
       this.onFailure()
     }
   }
 
-  handleAck() {
-    if (!this.timerId) return
+  start() {
+    if (this.done || this.timerId !== null) return
+    this._sendPacket()
+  }
 
-    clearTimeout(this.timerId)
-    this.timerId = null
+  handleAck() {
+    if (this.done) return
+
+    this.done = true
+    if (this.timerId !== null) {
+      clearTimeout(this.timerId)
+      this.timerId = null
+    }
   }
 }
 
@@ -99,8 +109,8 @@ class Route {
         this.p1JoinResender = null
       }
     } else if (this.playerTwoId === playerId) {
-      if (this.playerOneEndpoint.port !== rinfo.port ||
-          this.playerOneEndpoint.address !== rinfo.address) {
+      if (this.playerTwoEndpoint.port !== rinfo.port ||
+          this.playerTwoEndpoint.address !== rinfo.address) {
         return
       }
       if (this.p2JoinResender) {
@@ -117,6 +127,10 @@ class Failure {
     this.rinfo = rinfo
 
     this.resender = new PacketResender(timeout, maxResends, rinfo, packetData, sendFn, onNoAck)
+  }
+
+  start() {
+    this.resender.start()
   }
 
   handleAck() {
@@ -191,6 +205,7 @@ export class ProtocolHandler {
     const failure = new Failure(failureId, rinfo, ProtocolHandler.ACK_TIMEOUT,
         ProtocolHandler.MAX_RESENDS, response, this.send, () => this.failures.delete(failureId))
     this.failures.set(failureId, failure)
+    failure.start()
   }
 
   _onCreateRoute(msg, rinfo) {
@@ -212,6 +227,7 @@ export class ProtocolHandler {
     const response = CreateRouteSuccess.create(playerOne, playerTwo, route.id)
     route.createResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
         ProtocolHandler.MAX_RESENDS, rinfo, response, this.send, () => this.routes.delete(route.id))
+    route.createResender.start()
   }
 
   _onCreateRouteSuccessAck(msg, rinfo) {
@@ -280,6 +296,7 @@ export class ProtocolHandler {
     } else {
       route.p2JoinResender = resender
     }
+    resender.start()
 
     if (!wasConnected && route.connected) {
       // TODO(tec27): send route ready

@@ -201,30 +201,30 @@ const P2_RINFO = {
 }
 describe('ProtocolHandler - Players', () => {
   let sent
-  let handler
   let routeId
+
+  const handler = new ProtocolHandler(SECRET, (msg, offset, length, port, address) => {
+    const copied = Buffer.alloc(length)
+    msg.copy(copied, 0, offset, length)
+    if (port === P1_RINFO.port && address === P1_RINFO.address) {
+      sent.p1.push(copied)
+    } else if (port === P2_RINFO.port && address === P2_RINFO.address) {
+      sent.p2.push(copied)
+    } else if (port === CREATOR_RINFO.port && address === CREATOR_RINFO.address) {
+      if (copied[0] !== MSG_CREATE_ROUTE_SUCCESS) {
+        return
+      }
+      routeId = CreateRouteSuccess.getRouteId(copied)
+      const ack = CreateRouteSuccessAck.create(routeId)
+      handler.onMessage(ack, CREATOR_RINFO)
+    }
+  })
 
   beforeEach(() => {
     sent = {
       p1: [],
       p2: [],
     }
-    handler = new ProtocolHandler(SECRET, (msg, offset, length, port, address) => {
-      const copied = Buffer.alloc(length)
-      msg.copy(copied, 0, offset, length)
-      if (port === P1_RINFO.port && address === P1_RINFO.address) {
-        sent.p1.push(copied)
-      } else if (port === P2_RINFO.port && address === P2_RINFO.address) {
-        sent.p2.push(copied)
-      } else if (port === CREATOR_RINFO.port && address === CREATOR_RINFO.address) {
-        if (msg[0] !== MSG_CREATE_ROUTE_SUCCESS) {
-          return
-        }
-        routeId = CreateRouteSuccess.getRouteId(msg)
-        const ack = CreateRouteSuccessAck.create(routeId)
-        handler.onMessage(ack, CREATOR_RINFO)
-      }
-    })
 
     const create = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
     handler.onMessage(create, CREATOR_RINFO)
@@ -274,6 +274,27 @@ describe('ProtocolHandler - Players', () => {
     handler.onMessage(ack, P1_RINFO)
     await ackTimeout()
 
+    expect(sent.p1).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should give up on successfully joined route if no ack is received', async () => {
+    const msg = JoinRoute.create(routeId, 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+
+    // Expect some repeat messages
+    expect(sent.p1).to.have.length.above(1)
+    expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
+    expect(JoinRouteSuccess.getRouteId(response))
+      .to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
+    const lastSentCount = sent.p1.length
+
+    await ackTimeout()
     expect(sent.p1).to.have.lengthOf(lastSentCount)
   })
 })
