@@ -10,12 +10,15 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  RouteReady,
+  RouteReadyAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
   MSG_JOIN_ROUTE,
   MSG_JOIN_ROUTE_FAILURE_ACK,
   MSG_JOIN_ROUTE_SUCCESS_ACK,
+  MSG_ROUTE_READY_ACK,
 } from './packets'
 import genId from './gen-id'
 
@@ -74,7 +77,12 @@ class Route {
 
     this.createResender = null
     this.p1JoinResender = null
+    this.p1ReadyResender = null
     this.p2JoinResender = null
+    this.p2ReadyResender = null
+
+    this.p1LastMessage = Date.now()
+    this.p2LastMessage = Date.now()
   }
 
   get playerOneConnected() {
@@ -119,6 +127,32 @@ class Route {
       if (this.p2JoinResender) {
         this.p2JoinResender.handleAck()
         this.p2JoinResender = null
+      }
+    }
+  }
+
+  handlePostReadyMessage(playerId, rinfo) {
+    if (!this.connected || (!this.p1ReadyResender && !this.p2ReadyResender)) {
+      return
+    }
+
+    if (this.playerOneId === playerId) {
+      if (this.playerOneEndpoint.port !== rinfo.port ||
+          this.playerOneEndpoint.address !== rinfo.address) {
+        return
+      }
+      if (this.p1ReadyResender) {
+        this.p1ReadyResender.handleAck()
+        this.p1ReadyResender = null
+      }
+    } else if (this.playerTwoId === playerId) {
+      if (this.playerTwoEndpoint.port !== rinfo.port ||
+          this.playerTwoEndpoint.address !== rinfo.address) {
+        return
+      }
+      if (this.p2ReadyResender) {
+        this.p2ReadyResender.handleAck()
+        this.p2ReadyResender = null
       }
     }
   }
@@ -180,6 +214,9 @@ export class ProtocolHandler {
       case MSG_JOIN_ROUTE_SUCCESS_ACK:
         this._onJoinRouteSuccessAck(msg, rinfo)
         break
+      case MSG_ROUTE_READY_ACK:
+        this._onRouteReadyAck(msg, rinfo)
+        break
     }
   }
 
@@ -191,8 +228,14 @@ export class ProtocolHandler {
       if (route.p1JoinResender) {
         route.p1JoinResender.handleAck()
       }
+      if (route.p1ReadyResender) {
+        route.p1ReadyResender.handleAck()
+      }
       if (route.p2JoinResender) {
         route.p2JoinResender.handleAck()
+      }
+      if (route.p2ReadyResender) {
+        route.p2ReadyResender.handleAck()
       }
     }
     this.routes.clear()
@@ -289,7 +332,6 @@ export class ProtocolHandler {
       return
     }
 
-
     const routeId = JoinRoute.getRouteId(msg)
     if (!this.routes.has(routeId)) {
       this._sendJoinFailure(msg, rinfo)
@@ -315,7 +357,13 @@ export class ProtocolHandler {
     resender.start()
 
     if (!wasConnected && route.connected) {
-      // TODO(tec27): send route ready
+      const readyMsg = RouteReady.create(routeId)
+      route.p1ReadyResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
+          ProtocolHandler.MAX_RESENDS, route.playerOneEndpoint, readyMsg, this.send, () => {})
+      route.p2ReadyResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
+          ProtocolHandler.MAX_RESENDS, route.playerTwoEndpoint, readyMsg, this.send, () => {})
+      route.p1ReadyResender.start()
+      route.p2ReadyResender.start()
     }
   }
 
@@ -349,6 +397,20 @@ export class ProtocolHandler {
     const route = this.routes.get(routeId)
     const playerId = JoinRouteSuccessAck.getPlayerId(msg)
     route.handleJoinSuccessAck(playerId, rinfo)
+  }
+
+  _onRouteReadyAck(msg, rinfo) {
+    if (!RouteReadyAck.validate(msg)) {
+      return
+    }
+
+    const routeId = RouteReadyAck.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      return
+    }
+    const route = this.routes.get(routeId)
+    const playerId = RouteReadyAck.getPlayerId(msg)
+    route.handlePostReadyMessage(playerId, rinfo)
   }
 }
 

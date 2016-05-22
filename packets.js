@@ -279,3 +279,51 @@ export const JoinRouteFailureAck = {
     return msg.toString('utf8', 1)
   },
 }
+
+
+// Intended to be sent from rally-point to players.
+// Indicates that the specified route has both players and is ready to use for forwarding.
+export const MSG_ROUTE_READY = 0x0A
+export const LENGTH_MSG_ROUTE_READY = 1 + 8 /* route ID */
+export const RouteReady = {
+  create(routeId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_ROUTE_READY)
+    msg.writeUInt8(MSG_ROUTE_READY, 0)
+    msg.write(routeId, 1)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_ROUTE_READY
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1)
+  },
+}
+
+// Intended to be sent from players to rally-point.
+// Indicates that the player received the notification of route readiness.
+export const MSG_ROUTE_READY_ACK = 0x0B
+export const LENGTH_MSG_ROUTE_READY_ACK = 1 + 8 /* route ID */ + 4 /* player ID */
+export const RouteReadyAck = {
+  create(routeId, playerId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_ROUTE_READY_ACK)
+    msg.writeUInt8(MSG_ROUTE_READY_ACK, 0)
+    msg.write(routeId, 1)
+    msg.writeUInt32LE(playerId, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_ROUTE_READY_ACK
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getPlayerId(msg) {
+    return msg.readUInt32LE(9)
+  },
+}

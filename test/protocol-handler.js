@@ -10,11 +10,14 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  RouteReady,
+  RouteReadyAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE,
   MSG_CREATE_ROUTE_SUCCESS,
   MSG_JOIN_ROUTE_FAILURE,
   MSG_JOIN_ROUTE_SUCCESS,
+  MSG_ROUTE_READY,
 } from '../packets'
 
 import { ProtocolHandler } from '../create-server'
@@ -386,5 +389,74 @@ describe('ProtocolHandler - Players', () => {
 
     await ackTimeout()
     expect(sent.p1).to.have.lengthOf(lastSentCount)
+  })
+})
+
+describe('ProtocolHandler - Completed routes', () => {
+  let sent
+  let routeId
+
+  const handler = new ProtocolHandler(SECRET, (msg, offset, length, port, address) => {
+    const copied = Buffer.alloc(length)
+    msg.copy(copied, 0, offset, length)
+    if (port === P1_RINFO.port && address === P1_RINFO.address) {
+      if (copied[0] === MSG_JOIN_ROUTE_SUCCESS) {
+        handler.onMessage(JoinRouteSuccessAck.create(routeId, 0x11111111), P1_RINFO)
+      } else {
+        sent.p1.push(copied)
+      }
+    } else if (port === P2_RINFO.port && address === P2_RINFO.address) {
+      if (copied[0] === MSG_JOIN_ROUTE_SUCCESS) {
+        handler.onMessage(JoinRouteSuccessAck.create(routeId, 0x22222222), P2_RINFO)
+      } else {
+        sent.p2.push(copied)
+      }
+    } else if (port === CREATOR_RINFO.port && address === CREATOR_RINFO.address) {
+      if (copied[0] !== MSG_CREATE_ROUTE_SUCCESS) {
+        return
+      }
+      routeId = CreateRouteSuccess.getRouteId(copied)
+      const ack = CreateRouteSuccessAck.create(routeId)
+      handler.onMessage(ack, CREATOR_RINFO)
+
+      handler.onMessage(JoinRoute.create(routeId, 0x11111111), P1_RINFO)
+      handler.onMessage(JoinRoute.create(routeId, 0x22222222), P2_RINFO)
+    }
+  })
+
+  beforeEach(() => {
+    sent = {
+      p1: [],
+      p2: [],
+    }
+
+    const create = CreateRoute.create(SECRET, 0x11111111, 0x22222222)
+    handler.onMessage(create, CREATOR_RINFO)
+  })
+
+  afterEach(() => {
+    handler.cleanup()
+  })
+
+  it('should notify both players of route readiness', async () => {
+    expect(sent.p1).to.have.lengthOf(1)
+    let response = sent.p1[0]
+    expect(response[0]).to.eql(MSG_ROUTE_READY)
+    expect(RouteReady.validate(response)).to.be.true
+    expect(RouteReady.getRouteId(response)).to.eql(routeId)
+
+    expect(sent.p2).to.have.lengthOf(1)
+    response = sent.p2[0]
+    expect(response[0]).to.eql(MSG_ROUTE_READY)
+    expect(RouteReady.validate(response)).to.be.true
+    expect(RouteReady.getRouteId(response)).to.eql(routeId)
+
+    handler.onMessage(RouteReadyAck.create(routeId, 0x11111111), P1_RINFO)
+    handler.onMessage(RouteReadyAck.create(routeId, 0x22222222), P2_RINFO)
+    await ackTimeout()
+
+    // Expect no more messages to have been sent
+    expect(sent.p1).to.have.lengthOf(1)
+    expect(sent.p2).to.have.lengthOf(1)
   })
 })
