@@ -1,8 +1,10 @@
 {
   "name": "rally-point",
+  "private": true,
   "version": "1.0.0",
   "description": "A server for forwarding Starcraft: Brood War game packets between clients.",
   "main": "index.js",
+  "engines": { "node": ">= 6.0.0" },
   "scripts": {
     "autotest": "mocha --watch -R spec --compilers js:babel-register --recursive test/",
     "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
