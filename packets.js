@@ -203,7 +203,7 @@ export const JoinRouteSuccess = {
 
   getRouteId(msg) {
     return msg.toString('utf8', 1)
-  }
+  },
 }
 
 // Intended to be sent from players to rally-point
@@ -229,5 +229,53 @@ export const JoinRouteSuccessAck = {
 
   getPlayerId(msg) {
     return msg.readUInt32LE(9)
+  },
+}
+
+// Intended to be sent from rally-point to players
+// Indicates that the player's join request has failed
+export const MSG_JOIN_ROUTE_FAILURE = 0x08
+export const LENGTH_MSG_JOIN_ROUTE_FAILURE = 1 + 8 /* routeID */ + 8 /* failureID */
+export const JoinRouteFailure = {
+  create(routeId, failureId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_JOIN_ROUTE_FAILURE)
+    msg.writeUInt8(MSG_JOIN_ROUTE_FAILURE, 0)
+    msg.write(routeId, 1)
+    msg.write(failureId, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_JOIN_ROUTE_FAILURE
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getFailureId(msg) {
+    return msg.toString('utf8', 9)
+  },
+}
+
+
+// Intended to be sent from players to rally-point.
+// Indicates that the player has received notification that their join request failed.
+export const MSG_JOIN_ROUTE_FAILURE_ACK = 0x09
+export const LENGTH_MSG_JOIN_ROUTE_FAILURE_ACK = 1 + 8 /* failure ID */
+export const JoinRouteFailureAck = {
+  create(failureId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_JOIN_ROUTE_FAILURE_ACK)
+    msg.writeUInt8(MSG_JOIN_ROUTE_FAILURE_ACK, 0)
+    msg.write(failureId, 1)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_JOIN_ROUTE_FAILURE_ACK
+  },
+
+  getFailureId(msg) {
+    return msg.toString('utf8', 1)
   },
 }

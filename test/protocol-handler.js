@@ -6,11 +6,14 @@ import {
   CreateRouteSuccess,
   CreateRouteSuccessAck,
   JoinRoute,
+  JoinRouteFailure,
+  JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE,
   MSG_CREATE_ROUTE_SUCCESS,
+  MSG_JOIN_ROUTE_FAILURE,
   MSG_JOIN_ROUTE_SUCCESS,
 } from '../packets'
 
@@ -292,6 +295,93 @@ describe('ProtocolHandler - Players', () => {
     expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
     expect(JoinRouteSuccess.getRouteId(response))
       .to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
+    const lastSentCount = sent.p1.length
+
+    await ackTimeout()
+    expect(sent.p1).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should handle join route failures - nonexistent routes', async () => {
+    const msg = JoinRoute.create('deadbeef', 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+    expect(JoinRouteFailure.validate(response)).to.be.true
+    expect(response[0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
+    expect(JoinRouteFailure.getRouteId(response)).to.eql('deadbeef')
+
+    const failureId = JoinRouteFailure.getFailureId(response)
+    const ack = JoinRouteFailureAck.create(failureId)
+
+    handler.onMessage(ack, P1_RINFO)
+    await ackTimeout()
+
+    // Expect no more messages to have been sent
+    expect(sent.p1).to.have.lengthOf(1)
+  })
+
+  it('should handle join route failures - incorrect player id', async () => {
+    const msg = JoinRoute.create(routeId, 0x55555555)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+    expect(JoinRouteFailure.validate(response)).to.be.true
+    expect(response[0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
+    expect(JoinRouteFailure.getRouteId(response)).to.eql(routeId)
+
+    const failureId = JoinRouteFailure.getFailureId(response)
+    const ack = JoinRouteFailureAck.create(failureId)
+
+    handler.onMessage(ack, P1_RINFO)
+    await ackTimeout()
+
+    // Expect no more messages to have been sent
+    expect(sent.p1).to.have.lengthOf(1)
+  })
+
+  it('should re-send join route failure messages until ack is received', async () => {
+    const msg = JoinRoute.create('deadbeef', 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+    await ackTimeout()
+
+    // Expect some repeat messages
+    expect(sent.p1).to.have.length.above(1)
+    expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
+    expect(JoinRouteFailure.getFailureId(response))
+      .to.eql(JoinRouteFailure.getFailureId(sent.p1[1]))
+    const lastSentCount = sent.p1.length
+
+    const failureId = JoinRouteFailure.getFailureId(response)
+    const ack = JoinRouteFailureAck.create(failureId)
+    handler.onMessage(ack, P1_RINFO)
+    await ackTimeout()
+
+    expect(sent.p1).to.have.lengthOf(lastSentCount)
+  })
+
+  it('should give up on sending join route failure messages if no ack is received', async () => {
+    const msg = JoinRoute.create('deadbeef', 0x11111111)
+
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+
+    // Expect some repeat messages
+    expect(sent.p1).to.have.length.above(1)
+    expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
+    expect(JoinRouteFailure.getFailureId(response))
+      .to.eql(JoinRouteFailure.getFailureId(sent.p1[1]))
     const lastSentCount = sent.p1.length
 
     await ackTimeout()

@@ -6,12 +6,15 @@ import {
   CreateRouteSuccess,
   CreateRouteSuccessAck,
   JoinRoute,
+  JoinRouteFailure,
+  JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
   MSG_JOIN_ROUTE,
+  MSG_JOIN_ROUTE_FAILURE_ACK,
   MSG_JOIN_ROUTE_SUCCESS_ACK,
 } from './packets'
 import genId from './gen-id'
@@ -171,6 +174,9 @@ export class ProtocolHandler {
       case MSG_JOIN_ROUTE:
         this._onJoinRoute(msg, rinfo)
         break
+      case MSG_JOIN_ROUTE_FAILURE_ACK:
+        this._onJoinRouteFailureAck(msg, rinfo)
+        break
       case MSG_JOIN_ROUTE_SUCCESS_ACK:
         this._onJoinRouteSuccessAck(msg, rinfo)
         break
@@ -268,6 +274,16 @@ export class ProtocolHandler {
     this.failures.delete(failureId)
   }
 
+  _sendJoinFailure(msg, rinfo) {
+    const routeId = JoinRoute.getRouteId(msg)
+    const failureId = genId()
+    const response = JoinRouteFailure.create(routeId, failureId)
+    const failure = new Failure(failureId, rinfo, ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS, response, this.send, () => this.failures.delete(failureId))
+    this.failures.set(failureId, failure)
+    failure.start()
+  }
+
   _onJoinRoute(msg, rinfo) {
     if (!JoinRoute.validate(msg)) {
       return
@@ -276,7 +292,7 @@ export class ProtocolHandler {
 
     const routeId = JoinRoute.getRouteId(msg)
     if (!this.routes.has(routeId)) {
-      // TODO(tec27): send failure
+      this._sendJoinFailure(msg, rinfo)
       return
     }
     const playerId = JoinRoute.getPlayerId(msg)
@@ -284,7 +300,7 @@ export class ProtocolHandler {
     const wasConnected = route.connected
     const playerNum = route.registerEndpoint(playerId, rinfo)
     if (!playerNum) {
-      // TODO(tec27): send failure
+      this._sendJoinFailure(msg, rinfo)
       return
     }
 
@@ -301,6 +317,24 @@ export class ProtocolHandler {
     if (!wasConnected && route.connected) {
       // TODO(tec27): send route ready
     }
+  }
+
+  _onJoinRouteFailureAck(msg, rinfo) {
+    if (!JoinRouteFailureAck.validate(msg)) {
+      return
+    }
+
+    const failureId = JoinRouteFailureAck.getFailureId(msg)
+    if (!this.failures.has(failureId)) {
+      return
+    }
+    const failure = this.failures.get(failureId)
+    if (failure.rinfo.port !== rinfo.port || failure.rinfo.address !== rinfo.address) {
+      return
+    }
+
+    failure.handleAck()
+    this.failures.delete(failureId)
   }
 
   _onJoinRouteSuccessAck(msg, rinfo) {
