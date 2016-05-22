@@ -327,3 +327,86 @@ export const RouteReadyAck = {
     return msg.readUInt32LE(9)
   },
 }
+
+// Intended to be sent between players and rally-point (from either side)
+// rally-point should send a keep-alive in response to this packet from a player
+export const MSG_KEEP_ALIVE = 0x0C
+export const LENGTH_MSG_KEEP_ALIVE = 1 + 8 /* route ID */ + 4 /* player ID */
+export const KeepAlive = {
+  create(routeId, playerId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_KEEP_ALIVE)
+    msg.writeUInt8(MSG_KEEP_ALIVE, 0)
+    msg.write(routeId, 1)
+    msg.writeUInt32LE(playerId, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_KEEP_ALIVE
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getPlayerId(msg) {
+    return msg.readUInt32LE(9)
+  },
+}
+
+// Intended to be sent from players to rally-point
+// Contains data that a player wants to forward to the other player
+export const MSG_FORWARD = 0x0D
+export const MIN_LENGTH_MSG_FORWARD = 1 + 8 /* route ID */ + 4 /* player ID */
+export const Forward = {
+  create(routeId, playerId, data) {
+    const msg = Buffer.allocUnsafe(MIN_LENGTH_MSG_FORWARD + data.length)
+    msg.writeUInt8(MSG_FORWARD, 0)
+    msg.write(routeId, 1)
+    msg.writeUInt32LE(playerId, 9)
+    data.copy(msg, 13)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length >= MIN_LENGTH_MSG_FORWARD
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getPlayerId(msg) {
+    return msg.readUInt32LE(9)
+  },
+
+  getData(msg) {
+    return msg.slice(13)
+  },
+}
+
+// Intended to be sent from rally-point to players
+// Contains data that the other player forwards to this one
+export const MSG_RECEIVE = 0x0E
+export const MIN_LENGTH_MSG_RECEIVE = 1 + 8 /* route ID */
+export const Receive = {
+  create(routeId, data) {
+    const msg = Buffer.allocUnsafe(MIN_LENGTH_MSG_RECEIVE + data.length)
+    msg.writeUInt8(MSG_RECEIVE, 0)
+    msg.write(routeId, 1)
+    data.copy(msg, 9)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length >= MIN_LENGTH_MSG_RECEIVE
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getData(msg) {
+    return msg.slice(9)
+  },
+}

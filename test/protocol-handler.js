@@ -5,6 +5,7 @@ import {
   CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
+  Forward,
   JoinRoute,
   JoinRouteFailure,
   JoinRouteFailureAck,
@@ -458,5 +459,27 @@ describe('ProtocolHandler - Completed routes', () => {
     // Expect no more messages to have been sent
     expect(sent.p1).to.have.lengthOf(1)
     expect(sent.p2).to.have.lengthOf(1)
+  })
+
+  it('should keep notifying about readiness until acked or a data packet is received', async () => {
+    expect(sent.p1).to.have.lengthOf(1)
+    expect(sent.p2).to.have.lengthOf(1)
+
+    await ackTimeout()
+
+    expect(sent.p1).to.have.length.above(1)
+    const p1Sent = sent.p1.length
+
+    handler.onMessage(RouteReadyAck.create(routeId, 0x11111111), P1_RINFO)
+    await ackTimeout()
+    // Expect no more messages to have been sent
+    expect(sent.p1).to.have.lengthOf(p1Sent)
+
+    expect(sent.p2).to.have.length.above(1)
+    const p2Sent = sent.p2.length
+
+    handler.onMessage(Forward.create(routeId, 0x22222222, Buffer.from('hi')), P2_RINFO)
+    await ackTimeout()
+    expect(sent.p2).to.have.lengthOf(p2Sent)
   })
 })

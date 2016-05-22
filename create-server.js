@@ -5,6 +5,7 @@ import {
   CreateRouteFailureAck,
   CreateRouteSuccess,
   CreateRouteSuccessAck,
+  Forward,
   JoinRoute,
   JoinRouteFailure,
   JoinRouteFailureAck,
@@ -15,6 +16,7 @@ import {
   MSG_CREATE_ROUTE,
   MSG_CREATE_ROUTE_FAILURE_ACK,
   MSG_CREATE_ROUTE_SUCCESS_ACK,
+  MSG_FORWARD,
   MSG_JOIN_ROUTE,
   MSG_JOIN_ROUTE_FAILURE_ACK,
   MSG_JOIN_ROUTE_SUCCESS_ACK,
@@ -97,6 +99,10 @@ class Route {
     return this.playerOneConnected && this.playerTwoConnected
   }
 
+  get lastActive() {
+    return Math.min(this.p1LastMessage, this.p2LastMessage)
+  }
+
   registerEndpoint(playerId, rinfo) {
     if (this.playerOneId === playerId) {
       this.playerOneEndpoint = rinfo
@@ -133,14 +139,16 @@ class Route {
 
   handlePostReadyMessage(playerId, rinfo) {
     if (!this.connected || (!this.p1ReadyResender && !this.p2ReadyResender)) {
-      return
+      return false
     }
 
     if (this.playerOneId === playerId) {
       if (this.playerOneEndpoint.port !== rinfo.port ||
           this.playerOneEndpoint.address !== rinfo.address) {
-        return
+        return false
       }
+
+      this.p1LastMessage = Date.now()
       if (this.p1ReadyResender) {
         this.p1ReadyResender.handleAck()
         this.p1ReadyResender = null
@@ -148,13 +156,17 @@ class Route {
     } else if (this.playerTwoId === playerId) {
       if (this.playerTwoEndpoint.port !== rinfo.port ||
           this.playerTwoEndpoint.address !== rinfo.address) {
-        return
+        return false
       }
+
+      this.p2LastMessage = Date.now()
       if (this.p2ReadyResender) {
         this.p2ReadyResender.handleAck()
         this.p2ReadyResender = null
       }
     }
+
+    return true
   }
 }
 
@@ -216,6 +228,9 @@ export class ProtocolHandler {
         break
       case MSG_ROUTE_READY_ACK:
         this._onRouteReadyAck(msg, rinfo)
+        break
+      case MSG_FORWARD:
+        this._onForward(msg, rinfo)
         break
     }
   }
@@ -411,6 +426,22 @@ export class ProtocolHandler {
     const route = this.routes.get(routeId)
     const playerId = RouteReadyAck.getPlayerId(msg)
     route.handlePostReadyMessage(playerId, rinfo)
+  }
+
+  _onForward(msg, rinfo) {
+    if (!Forward.validate(msg)) {
+      return
+    }
+
+    const routeId = Forward.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      return
+    }
+    const route = this.routes.get(routeId)
+    const playerId = Forward.getPlayerId(msg)
+    if (!route.handlePostReadyMessage(playerId, rinfo)) {
+      return
+    }
   }
 }
 
