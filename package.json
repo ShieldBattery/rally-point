@@ -29,7 +29,7 @@
     "babel-core": "^6.7.6",
     "babel-plugin-transform-es2015-arrow-functions": "^6.5.2",
     "babel-polyfill": "^6.7.4",
-    "babel-preset-node5": "^11.0.1",
+    "babel-preset-node6": "^11.0.0",
     "babel-preset-stage-0": "^6.5.0",
     "babel-register": "^6.7.2",
     "nconf": "^0.8.4"
