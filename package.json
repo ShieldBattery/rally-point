@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "A server for forwarding Starcraft: Brood War game packets between clients.",
   "main": "index.js",
-  "engines": { "node": ">= 6.0.0" },
+  "engines": {
+    "node": ">= 6.0.0"
+  },
   "scripts": {
     "autotest": "mocha --watch -R spec --compilers js:babel-register --recursive test/",
     "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
@@ -29,7 +31,6 @@
   "homepage": "https://github.com/tec27/rally-point#readme",
   "dependencies": {
     "babel-core": "^6.7.6",
-    "babel-plugin-transform-es2015-arrow-functions": "^6.5.2",
     "babel-polyfill": "^6.7.4",
     "babel-preset-node6": "^11.0.0",
     "babel-preset-stage-0": "^6.5.0",
