@@ -11,6 +11,7 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  Receive,
   RouteReady,
   RouteReadyAck,
   MSG_CREATE_ROUTE,
@@ -18,6 +19,7 @@ import {
   MSG_CREATE_ROUTE_SUCCESS,
   MSG_JOIN_ROUTE_FAILURE,
   MSG_JOIN_ROUTE_SUCCESS,
+  MSG_RECEIVE,
   MSG_ROUTE_READY,
 } from '../packets'
 
@@ -481,5 +483,17 @@ describe('ProtocolHandler - Completed routes', () => {
     handler.onMessage(Forward.create(routeId, 0x22222222, Buffer.from('hi')), P2_RINFO)
     await ackTimeout()
     expect(sent.p2).to.have.lengthOf(p2Sent)
+  })
+
+  it('should forward data from one player to another', async () => {
+    handler.onMessage(Forward.create(routeId, 0x11111111, Buffer.from('hello')), P1_RINFO)
+
+    expect(sent.p2).to.have.lengthOf(2)
+    const received = sent.p2[1]
+
+    expect(received[0]).to.eql(MSG_RECEIVE)
+    expect(Receive.validate(received)).to.be.true
+    expect(Receive.getRouteId(received)).to.eql(routeId)
+    expect(Receive.getData(received).toString('utf8')).to.eql('hello')
   })
 })

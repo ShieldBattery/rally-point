@@ -442,6 +442,10 @@ export class ProtocolHandler {
     if (!route.handlePostReadyMessage(playerId, rinfo)) {
       return
     }
+
+    const receive = Forward.toReceive(msg)
+    const dest = playerId === route.playerOneId ? route.playerTwoEndpoint : route.playerOneEndpoint
+    this.send(receive, 0, receive.length, dest.port, dest.address)
   }
 }
 

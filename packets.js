@@ -354,9 +354,36 @@ export const KeepAlive = {
   },
 }
 
+// Intended to be sent from rally-point to players
+// Contains data that the other player forwards to this one
+export const MSG_RECEIVE = 0x0D
+export const MIN_LENGTH_MSG_RECEIVE = 1 + 8 /* route ID */
+export const Receive = {
+  create(routeId, data, dataStart = 0, dataEnd) {
+    const end = dataEnd === undefined ? data.length : dataEnd
+    const msg = Buffer.allocUnsafe(MIN_LENGTH_MSG_RECEIVE + (end - dataStart))
+    msg.writeUInt8(MSG_RECEIVE, 0)
+    msg.write(routeId, 1)
+    data.copy(msg, 9, dataStart, dataEnd)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length >= MIN_LENGTH_MSG_RECEIVE
+  },
+
+  getRouteId(msg) {
+    return msg.toString('utf8', 1, 9)
+  },
+
+  getData(msg) {
+    return msg.slice(9)
+  },
+}
+
 // Intended to be sent from players to rally-point
 // Contains data that a player wants to forward to the other player
-export const MSG_FORWARD = 0x0D
+export const MSG_FORWARD = 0x0E
 export const MIN_LENGTH_MSG_FORWARD = 1 + 8 /* route ID */ + 4 /* player ID */
 export const Forward = {
   create(routeId, playerId, data) {
@@ -383,30 +410,8 @@ export const Forward = {
   getData(msg) {
     return msg.slice(13)
   },
-}
 
-// Intended to be sent from rally-point to players
-// Contains data that the other player forwards to this one
-export const MSG_RECEIVE = 0x0E
-export const MIN_LENGTH_MSG_RECEIVE = 1 + 8 /* route ID */
-export const Receive = {
-  create(routeId, data) {
-    const msg = Buffer.allocUnsafe(MIN_LENGTH_MSG_RECEIVE + data.length)
-    msg.writeUInt8(MSG_RECEIVE, 0)
-    msg.write(routeId, 1)
-    data.copy(msg, 9)
-    return msg
-  },
-
-  validate(msg) {
-    return msg.length >= MIN_LENGTH_MSG_RECEIVE
-  },
-
-  getRouteId(msg) {
-    return msg.toString('utf8', 1, 9)
-  },
-
-  getData(msg) {
-    return msg.slice(9)
-  },
+  toReceive(msg) {
+    return Receive.create(Forward.getRouteId(msg), msg, 13)
+  }
 }
