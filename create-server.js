@@ -11,6 +11,8 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  KeepAlive,
+  Ping,
   RouteReady,
   RouteReadyAck,
   MSG_CREATE_ROUTE,
@@ -20,6 +22,8 @@ import {
   MSG_JOIN_ROUTE,
   MSG_JOIN_ROUTE_FAILURE_ACK,
   MSG_JOIN_ROUTE_SUCCESS_ACK,
+  MSG_KEEP_ALIVE,
+  MSG_PING,
   MSG_ROUTE_READY_ACK,
 } from './packets'
 import genId from './gen-id'
@@ -164,6 +168,28 @@ class Route {
         this.p2ReadyResender.handleAck()
         this.p2ReadyResender = null
       }
+    } else {
+      return false
+    }
+
+    return true
+  }
+
+  handleKeepAlive(playerId, rinfo) {
+    if (this.playerOneId === playerId) {
+      if (this.playerOneEndpoint.port !== rinfo.port ||
+          this.playerOneEndpoint.address !== rinfo.address) {
+        return false
+      }
+      this.p1LastMessage = Date.now()
+    } else if (this.playerTwoId === playerId) {
+      if (this.playerTwoEndpoint.port !== rinfo.port ||
+          this.playerTwoEndpoint.address !== rinfo.address) {
+        return false
+      }
+      this.p2LastMessage = Date.now()
+    } else {
+      return false
     }
 
     return true
@@ -188,8 +214,12 @@ class Failure {
 }
 
 export class ProtocolHandler {
+  // How long to wait before re-sending a packet (milliseconds)
   static ACK_TIMEOUT = 1000;
+  // How many times to resend a packet before giving up
   static MAX_RESENDS = 5;
+  // How long a route can stay idle before it gets pruned (milliseconds)
+  static MAX_ROUTE_STALENESS = 10 * 60 * 1000;
 
   // sendFn is function(msg, offset, length, port, address)
   constructor(secret, sendFn) {
@@ -232,26 +262,36 @@ export class ProtocolHandler {
       case MSG_FORWARD:
         this._onForward(msg, rinfo)
         break
+      case MSG_KEEP_ALIVE:
+        this._onKeepAlive(msg, rinfo)
+        break
+      case MSG_PING:
+        this._onPing(msg, rinfo)
+        break
+    }
+  }
+
+  cleanRouteTimers(route) {
+    if (route.createResender) {
+      route.createResender.handleAck()
+    }
+    if (route.p1JoinResender) {
+      route.p1JoinResender.handleAck()
+    }
+    if (route.p1ReadyResender) {
+      route.p1ReadyResender.handleAck()
+    }
+    if (route.p2JoinResender) {
+      route.p2JoinResender.handleAck()
+    }
+    if (route.p2ReadyResender) {
+      route.p2ReadyResender.handleAck()
     }
   }
 
   cleanup() {
     for (const route of this.routes.values()) {
-      if (route.createResender) {
-        route.createResender.handleAck()
-      }
-      if (route.p1JoinResender) {
-        route.p1JoinResender.handleAck()
-      }
-      if (route.p1ReadyResender) {
-        route.p1ReadyResender.handleAck()
-      }
-      if (route.p2JoinResender) {
-        route.p2JoinResender.handleAck()
-      }
-      if (route.p2ReadyResender) {
-        route.p2ReadyResender.handleAck()
-      }
+      this.cleanRouteTimers(route)
     }
     this.routes.clear()
 
@@ -259,6 +299,20 @@ export class ProtocolHandler {
       failure.handleAck()
     }
     this.failures.clear()
+  }
+
+  pruneRoutes() {
+    const oldest = Date.now() - ProtocolHandler.MAX_ROUTE_STALENESS
+    let removed = 0
+    for (const route of this.routes.values()) {
+      if (route.lastActive < oldest) {
+        this.cleanRouteTimers(route)
+        this.routes.delete(route.id)
+        removed++
+      }
+    }
+
+    return removed
   }
 
   _sendCreateFailure(msg, rinfo) {
@@ -446,6 +500,31 @@ export class ProtocolHandler {
     const receive = Forward.toReceive(msg)
     const dest = playerId === route.playerOneId ? route.playerTwoEndpoint : route.playerOneEndpoint
     this.send(receive, 0, receive.length, dest.port, dest.address)
+  }
+
+  _onKeepAlive(msg, rinfo) {
+    if (!KeepAlive.validate(msg)) {
+      return
+    }
+
+    const routeId = KeepAlive.getRouteId(msg)
+    if (!this.routes.has(routeId)) {
+      return
+    }
+    const route = this.routes.get(routeId)
+    const playerId = KeepAlive.getPlayerId(msg)
+    if (!route.handleKeepAlive(playerId, rinfo)) {
+      return
+    }
+
+    this.send(msg, 0, msg.length, rinfo.port, rinfo.address)
+  }
+
+  _onPing(msg, rinfo) {
+    if (!Ping.validate(msg)) {
+      return
+    }
+    this.send(msg, 0, msg.length, rinfo.port, rinfo.address)
   }
 }
 

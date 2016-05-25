@@ -415,3 +415,24 @@ export const Forward = {
     return Receive.create(Forward.getRouteId(msg), msg, 13)
   }
 }
+
+// Intended to be sent from players to rally-point and back
+// Contains an ID that the player can use to identify the source packet
+export const MSG_PING = 0x0F
+export const LENGTH_MSG_PING = 1 + 4 /* ping ID */
+export const Ping = {
+  create(pingId) {
+    const msg = Buffer.allocUnsafe(LENGTH_MSG_PING)
+    msg.writeUInt8(MSG_PING, 0)
+    msg.writeUInt32LE(pingId, 1)
+    return msg
+  },
+
+  validate(msg) {
+    return msg.length === LENGTH_MSG_PING
+  },
+
+  getPingId(msg) {
+    return msg.readUInt32LE(1)
+  },
+}

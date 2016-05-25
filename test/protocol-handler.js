@@ -11,6 +11,8 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  KeepAlive,
+  Ping,
   Receive,
   RouteReady,
   RouteReadyAck,
@@ -19,6 +21,8 @@ import {
   MSG_CREATE_ROUTE_SUCCESS,
   MSG_JOIN_ROUTE_FAILURE,
   MSG_JOIN_ROUTE_SUCCESS,
+  MSG_KEEP_ALIVE,
+  MSG_PING,
   MSG_RECEIVE,
   MSG_ROUTE_READY,
 } from '../packets'
@@ -393,6 +397,18 @@ describe('ProtocolHandler - Players', () => {
     await ackTimeout()
     expect(sent.p1).to.have.lengthOf(lastSentCount)
   })
+
+  it('should reply to pings', async () => {
+    const msg = Ping.create(0xDEADBEEF)
+    handler.onMessage(msg, P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(1)
+    const response = sent.p1[0]
+
+    expect(response[0]).to.eql(MSG_PING)
+    expect(Ping.validate(response)).to.be.true
+    expect(Ping.getPingId(response)).to.eql(0xDEADBEEF)
+  })
 })
 
 describe('ProtocolHandler - Completed routes', () => {
@@ -495,5 +511,34 @@ describe('ProtocolHandler - Completed routes', () => {
     expect(Receive.validate(received)).to.be.true
     expect(Receive.getRouteId(received)).to.eql(routeId)
     expect(Receive.getData(received).toString('utf8')).to.eql('hello')
+  })
+
+  it('should reply to keep-alives', async () => {
+    handler.onMessage(KeepAlive.create(routeId, 0x11111111), P1_RINFO)
+
+    expect(sent.p1).to.have.lengthOf(2)
+    const received = sent.p1[1]
+
+    expect(received[0]).to.eql(MSG_KEEP_ALIVE)
+    expect(KeepAlive.validate(received)).to.be.true
+    expect(KeepAlive.getRouteId(received)).to.eql(routeId)
+    expect(KeepAlive.getPlayerId(received)).to.eql(0x11111111)
+  })
+
+  it('should prune inactive routes', async () => {
+    ProtocolHandler.MAX_ROUTE_STALENESS = 10
+
+    handler.onMessage(RouteReadyAck.create(routeId, 0x11111111), P1_RINFO)
+    handler.onMessage(RouteReadyAck.create(routeId, 0x22222222), P2_RINFO)
+
+    expect(handler.pruneRoutes()).to.eql(0)
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(handler.pruneRoutes()).to.eql(1)
+
+    const prevLength = sent.p2.length
+    handler.onMessage(Forward.create(routeId, 0x11111111, Buffer.from('hello')), P1_RINFO)
+
+    // Ensure the route actually got removed
+    expect(sent.p2).to.have.lengthOf(prevLength)
   })
 })
