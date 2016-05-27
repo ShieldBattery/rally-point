@@ -215,7 +215,7 @@ class Failure {
 
 export class ProtocolHandler {
   // How long to wait before re-sending a packet (milliseconds)
-  static ACK_TIMEOUT = 1000;
+  static ACK_TIMEOUT = 500;
   // How many times to resend a packet before giving up
   static MAX_RESENDS = 5;
   // How long a route can stay idle before it gets pruned (milliseconds)
@@ -528,17 +528,24 @@ export class ProtocolHandler {
   }
 }
 
-
 class Server {
   constructor(host, port, secret) {
     this.host = host
     this.port = port
     this.secret = secret
+    this.bound = false
 
     this.socket = dgram.createSocket('udp6')
     this.protocolHandler = new ProtocolHandler(secret, (msg, offset, length, port, address) =>
         this.socket.send(msg, offset, length, port, address))
     this.socket.on('message', (msg, rinfo) => this.protocolHandler.onMessage(msg, rinfo))
+
+    this.pruneInterval = setInterval(
+        () => this.protocolHandler.pruneRoutes(), 1.5 * ProtocolHandler.MAX_ROUTE_STALENESS)
+  }
+
+  get numRoutes() {
+    return this.protocolHandler.routes.size
   }
 
   async bind() {
@@ -551,6 +558,12 @@ class Server {
     })
 
     this.bound = true
+  }
+
+  close() {
+    this.socket.close()
+    clearInterval(this.pruneInterval)
+    this.protocolHandler.cleanup()
   }
 
   addErrorHandler(fn) {
