@@ -144,6 +144,8 @@ export default class RallyPointCreator {
   }
 
   _onMessage(msg, rinfo) {
+    if (msg.length < 1) return
+
     const key = `${rinfo.address}:${rinfo.port}`
     if (!this.outstanding.has(key)) return
     const serverRequests = this.outstanding.get(key)

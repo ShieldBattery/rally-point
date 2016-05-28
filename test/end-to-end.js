@@ -31,6 +31,18 @@ describe('Server and clients', function() {
     routeCreator.close()
   })
 
+  it('should be able to have clients ping servers', async () => {
+    const player = new Player(HOST, P1_PORT)
+    const results = await player.pingServers([
+      { address: HOST, port: SERVER_PORT },
+      { address: HOST, port: SERVER_PORT },
+    ])
+
+    expect(results).to.have.lengthOf(2)
+    expect(results[0].server).to.eql({ address: HOST, port: SERVER_PORT })
+    expect(results[0]).to.include.key('time')
+  })
+
   it('should be able to forward packets between two clients', async () => {
     const { routeId, p1Id, p2Id } = await routeCreator.createRoute(HOST, SERVER_PORT)
 
