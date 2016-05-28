@@ -121,12 +121,26 @@ export default class RallyPointCreator {
     const key = `${p1Id}|${p2Id}`
     if (serverRequests.has(key)) {
       const state = serverRequests.get(key)
-      serverRequests.delete(key)
       state.resolve({ p1Id, p2Id, routeId })
     }
   }
 
   _onCreateFailure(serverRequests, msg, rinfo) {
+    if (!CreateRouteFailure.validate(msg)) {
+      return
+    }
+
+    const failureId = CreateRouteFailure.getFailureId(msg)
+    const ack = CreateRouteFailureAck.create(failureId)
+    this.socket.send(ack, 0, ack.length, rinfo.port, rinfo.address)
+
+    const p1Id = CreateRouteFailure.getPlayerOneId(msg)
+    const p2Id = CreateRouteFailure.getPlayerTwoId(msg)
+    const key = `${p1Id}|${p2Id}`
+    if (serverRequests.has(key)) {
+      const state = serverRequests.get(key)
+      state.reject(new Error('Route creation failed'))
+    }
   }
 
   _onMessage(msg, rinfo) {

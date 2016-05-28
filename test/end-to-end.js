@@ -36,4 +36,17 @@ describe('Server and clients', function() {
 
     console.log(`routeId: ${routeId}, p1: ${p1Id}, p2: ${p2Id}`)
   })
+
+  it('should get route creation failures when secret is wrong', async () => {
+    routeCreator.close()
+    // We bind on a different port here to avoid colliding with the old RouteCreator
+    routeCreator = new RouteCreator(HOST, P1_PORT, 'wrongsecret')
+    await routeCreator.bind()
+    try {
+      await routeCreator.createRoute(HOST, SERVER_PORT)
+      throw new Error('Expected an Error to be thrown')
+    } catch (err) {
+      expect(err).to.not.be.null
+    }
+  })
 })
