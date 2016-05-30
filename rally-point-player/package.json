@@ -1,5 +1,5 @@
 {
-  "name": "rally-point",
+  "name": "rally-point-player",
   "version": "1.0.0",
   "description": "A client for rally-point-server that can send packets using created routes.",
   "main": "player.js",
