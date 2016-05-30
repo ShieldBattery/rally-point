@@ -54,7 +54,6 @@ export default class RallyPointCreator {
   }
 
   async createRoute(host, port, timeout = 5000) {
-    // TODO(tec27): normalize host to ipv6?
     const key = `${host}:${port}`
     const p1Id = genPlayerId()
     const p2Id = genPlayerId()

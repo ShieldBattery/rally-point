@@ -7,6 +7,7 @@ import {
   JoinRouteFailureAck,
   JoinRouteSuccess,
   JoinRouteSuccessAck,
+  KeepAlive,
   Ping,
   Receive,
   RouteReady,
@@ -55,6 +56,11 @@ class RallyPointRoute extends EventEmitter {
     this.owner.socket.send(packet, 0, packet.length, this.port, this.address)
   }
 
+  keepAlive() {
+    const packet = KeepAlive.create(this.routeId, this.playerId)
+    this.owner.socket.send(packet, 0, packet.length, this.port, this.address)
+  }
+
   _onRouteReady() {
     this._resolveReady()
   }
@@ -92,7 +98,16 @@ export default class RallyPointPlayer {
   }
 
   close() {
-    // TODO(tec27): clear in-progress pings/joins?
+    for (const ping of this.pings.values()) {
+      ping.resolve({ time: Number.MAX_VALUE, server: { address: ping.address, port: ping.port }})
+    }
+    this.pings.clear()
+
+    for (const join of this.joins.values()) {
+      join.reject('Join failed due to closing socket')
+    }
+    this.joins.clear()
+
     this.joinedServers.clear()
     this.activeRoutes.clear()
     this.socket.close()
