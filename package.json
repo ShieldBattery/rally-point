@@ -2,13 +2,14 @@
   "name": "rally-point",
   "private": true,
   "version": "1.0.0",
-  "description": "A server for forwarding Starcraft: Brood War game packets between clients.",
+  "description": "A server for forwarding UDP packets between two peers.",
   "main": "index.js",
   "engines": {
     "node": ">= 6.0.0"
   },
   "scripts": {
     "autotest": "mocha --watch -R spec --compilers js:babel-register --recursive test/",
+    "build": "node build.js",
     "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
     "posttest": "npm run lint",
     "test": "mocha -R spec --compilers js:babel-register --recursive test/"
@@ -18,6 +19,7 @@
     "url": "git+ssh://git@github.com/tec27/rally-point.git"
   },
   "keywords": [
+    "rally-point",
     "starcraft",
     "bw",
     "shieldbattery",

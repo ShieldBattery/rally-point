@@ -1,3 +1,6 @@
 node_modules/
+rally-point-creator/*.js
+rally-point-player/*.js
+rally-point-server/*.js
 npm-debug.log
 config.json
