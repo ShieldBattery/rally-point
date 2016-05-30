@@ -16,9 +16,11 @@ describe('Server and clients', function() {
 
   let server
   let routeCreator
+  let players
   beforeEach(async () => {
     server = createServer(HOST, SERVER_PORT, SECRET)
     routeCreator = new RouteCreator(HOST, CREATOR_PORT, SECRET)
+    players = []
 
     await Promise.all([
       server.bind(),
@@ -27,12 +29,17 @@ describe('Server and clients', function() {
   })
 
   afterEach(() => {
+    for (const p of players) {
+      p.close()
+    }
     server.close()
     routeCreator.close()
   })
 
   it('should be able to have clients ping servers', async () => {
     const player = new Player(HOST, P1_PORT)
+    players.push(player)
+    await player.bind()
     const results = await player.pingServers([
       { address: HOST, port: SERVER_PORT },
       { address: HOST, port: SERVER_PORT },
@@ -44,9 +51,29 @@ describe('Server and clients', function() {
   })
 
   it('should be able to forward packets between two clients', async () => {
+    const p1 = new Player(HOST, P1_PORT)
+    players.push(p1)
+    const p2 = new Player(HOST, P2_PORT)
+    players.push(p2)
+    await Promise.all([ p1.bind(), p2.bind() ])
     const { routeId, p1Id, p2Id } = await routeCreator.createRoute(HOST, SERVER_PORT)
 
-    console.log(`routeId: ${routeId}, p1: ${p1Id}, p2: ${p2Id}`)
+    const p1Route = await p1.joinRoute({ address: HOST, port: SERVER_PORT }, routeId, p1Id)
+    const p2Route = await p2.joinRoute({ address: HOST, port: SERVER_PORT }, routeId, p2Id)
+
+    const p1Received = new Promise(resolve => {
+      p1Route.on('message', data => resolve(data))
+    })
+    const p2Received = new Promise(resolve => {
+      p2Route.on('message', data => resolve(data))
+    })
+
+    p1Route.send(Buffer.from('hello'))
+    p2Route.send(Buffer.from('hi'))
+
+    const received = await Promise.all([p1Received, p2Received])
+    expect(received[0].toString('utf8')).to.eql('hi')
+    expect(received[1].toString('utf8')).to.eql('hello')
   })
 
   it('should get route creation failures when secret is wrong', async () => {
