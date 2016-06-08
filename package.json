@@ -1,7 +1,7 @@
 {
   "name": "rally-point",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "index.js",
   "engines": {
