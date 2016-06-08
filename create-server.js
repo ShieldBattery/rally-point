@@ -142,7 +142,7 @@ class Route {
   }
 
   handlePostReadyMessage(playerId, rinfo) {
-    if (!this.connected || (!this.p1ReadyResender && !this.p2ReadyResender)) {
+    if (!this.connected && !this.p1ReadyResender && !this.p2ReadyResender) {
       return false
     }
 
