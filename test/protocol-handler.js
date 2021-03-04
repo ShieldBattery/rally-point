@@ -115,7 +115,10 @@ describe('ProtocolHandler - Creators', () => {
 
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
-    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+    // NOTE(tec27): The 10 here is just to ensure that we've reached the max number of re-sent
+    // packets, later versions of Node (at least 14) seem to order things in such a way that we
+    // can't predictably just wait 1 more cycle than the max resends
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 10)
 
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
@@ -191,7 +194,10 @@ describe('ProtocolHandler - Creators', () => {
 
     expect(sent).to.have.lengthOf(1)
     const response = sent[0]
-    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+    // NOTE(tec27): The 10 here is just to ensure that we've reached the max number of re-sent
+    // packets, later versions of Node (at least 14) seem to order things in such a way that we
+    // can't predictably just wait 1 more cycle than the max resends
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 10)
 
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
@@ -301,7 +307,10 @@ describe('ProtocolHandler - Players', () => {
     expect(sent.p1).to.have.lengthOf(1)
     const response = sent.p1[0]
 
-    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+    // NOTE(tec27): The 10 here is just to ensure that we've reached the max number of re-sent
+    // packets, later versions of Node (at least 14) seem to order things in such a way that we
+    // can't predictably just wait 1 more cycle than the max resends
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 10)
 
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
@@ -388,7 +397,10 @@ describe('ProtocolHandler - Players', () => {
     expect(sent.p1).to.have.lengthOf(1)
     const response = sent.p1[0]
 
-    await ackTimeout(ProtocolHandler.MAX_RESENDS + 1)
+    // NOTE(tec27): The 10 here is just to ensure that we've reached the max number of re-sent
+    // packets, later versions of Node (at least 14) seem to order things in such a way that we
+    // can't predictably just wait 1 more cycle than the max resends
+    await ackTimeout(ProtocolHandler.MAX_RESENDS + 10)
 
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
