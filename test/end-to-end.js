@@ -11,7 +11,7 @@ const CREATOR_PORT = 56667
 const P1_PORT = 56668
 const P2_PORT = 56669
 
-describe('Server and clients', function() {
+describe('Server and clients', function () {
   this.timeout(10000)
 
   let server
@@ -22,10 +22,7 @@ describe('Server and clients', function() {
     routeCreator = new RouteCreator(HOST, CREATOR_PORT, SECRET)
     players = []
 
-    await Promise.all([
-      server.bind(),
-      routeCreator.bind(),
-    ])
+    await Promise.all([server.bind(), routeCreator.bind()])
   })
 
   afterEach(() => {
@@ -55,7 +52,7 @@ describe('Server and clients', function() {
     players.push(p1)
     const p2 = new Player(HOST, P2_PORT)
     players.push(p2)
-    await Promise.all([ p1.bind(), p2.bind() ])
+    await Promise.all([p1.bind(), p2.bind()])
     const { routeId, p1Id, p2Id } = await routeCreator.createRoute(HOST, SERVER_PORT)
 
     const p1Route = await p1.joinRoute({ address: HOST, port: SERVER_PORT }, routeId, p1Id)

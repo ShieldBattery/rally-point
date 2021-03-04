@@ -94,8 +94,9 @@ describe('ProtocolHandler - Creators', () => {
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
     expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_SUCCESS)
-    expect(CreateRouteSuccess.getRouteId(response.msg))
-      .to.eql(CreateRouteSuccess.getRouteId(sent[1].msg))
+    expect(CreateRouteSuccess.getRouteId(response.msg)).to.eql(
+      CreateRouteSuccess.getRouteId(sent[1].msg),
+    )
     const lastSentCount = sent.length
 
     const routeId = CreateRouteSuccess.getRouteId(response.msg)
@@ -119,8 +120,9 @@ describe('ProtocolHandler - Creators', () => {
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
     expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_SUCCESS)
-    expect(CreateRouteSuccess.getRouteId(response.msg))
-      .to.eql(CreateRouteSuccess.getRouteId(sent[1].msg))
+    expect(CreateRouteSuccess.getRouteId(response.msg)).to.eql(
+      CreateRouteSuccess.getRouteId(sent[1].msg),
+    )
     const lastSentCount = sent.length
 
     await ackTimeout()
@@ -156,7 +158,7 @@ describe('ProtocolHandler - Creators', () => {
     expect(response.msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
   })
 
-  it('should re-send route creation failures until acked', async() => {
+  it('should re-send route creation failures until acked', async () => {
     const msg = CreateRoute.create('oh noes', 0x11111111, 0x22222222)
 
     handler.onMessage(msg, CREATOR_RINFO)
@@ -168,8 +170,9 @@ describe('ProtocolHandler - Creators', () => {
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
     expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
-    expect(CreateRouteFailure.getFailureId(response.msg))
-      .to.eql(CreateRouteFailure.getFailureId(sent[1].msg))
+    expect(CreateRouteFailure.getFailureId(response.msg)).to.eql(
+      CreateRouteFailure.getFailureId(sent[1].msg),
+    )
     const lastSentCount = sent.length
 
     const failureId = CreateRouteFailure.getFailureId(response.msg)
@@ -193,8 +196,9 @@ describe('ProtocolHandler - Creators', () => {
     // Expect some repeat messages
     expect(sent).to.have.length.above(1)
     expect(sent[1].msg[0]).to.eql(MSG_CREATE_ROUTE_FAILURE)
-    expect(CreateRouteFailure.getFailureId(response.msg))
-      .to.eql(CreateRouteFailure.getFailureId(sent[1].msg))
+    expect(CreateRouteFailure.getFailureId(response.msg)).to.eql(
+      CreateRouteFailure.getFailureId(sent[1].msg),
+    )
     const lastSentCount = sent.length
 
     await ackTimeout()
@@ -279,8 +283,7 @@ describe('ProtocolHandler - Players', () => {
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
     expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
-    expect(JoinRouteSuccess.getRouteId(response))
-      .to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
+    expect(JoinRouteSuccess.getRouteId(response)).to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
     const lastSentCount = sent.p1.length
 
     const ack = JoinRouteSuccessAck.create(routeId, 0x11111111)
@@ -303,8 +306,7 @@ describe('ProtocolHandler - Players', () => {
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
     expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_SUCCESS)
-    expect(JoinRouteSuccess.getRouteId(response))
-      .to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
+    expect(JoinRouteSuccess.getRouteId(response)).to.eql(JoinRouteSuccess.getRouteId(sent.p1[1]))
     const lastSentCount = sent.p1.length
 
     await ackTimeout()
@@ -365,8 +367,9 @@ describe('ProtocolHandler - Players', () => {
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
     expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
-    expect(JoinRouteFailure.getFailureId(response))
-      .to.eql(JoinRouteFailure.getFailureId(sent.p1[1]))
+    expect(JoinRouteFailure.getFailureId(response)).to.eql(
+      JoinRouteFailure.getFailureId(sent.p1[1]),
+    )
     const lastSentCount = sent.p1.length
 
     const failureId = JoinRouteFailure.getFailureId(response)
@@ -390,8 +393,9 @@ describe('ProtocolHandler - Players', () => {
     // Expect some repeat messages
     expect(sent.p1).to.have.length.above(1)
     expect(sent.p1[1][0]).to.eql(MSG_JOIN_ROUTE_FAILURE)
-    expect(JoinRouteFailure.getFailureId(response))
-      .to.eql(JoinRouteFailure.getFailureId(sent.p1[1]))
+    expect(JoinRouteFailure.getFailureId(response)).to.eql(
+      JoinRouteFailure.getFailureId(sent.p1[1]),
+    )
     const lastSentCount = sent.p1.length
 
     await ackTimeout()
@@ -399,7 +403,7 @@ describe('ProtocolHandler - Players', () => {
   })
 
   it('should reply to pings', async () => {
-    const msg = Ping.create(0xDEADBEEF)
+    const msg = Ping.create(0xdeadbeef)
     handler.onMessage(msg, P1_RINFO)
 
     expect(sent.p1).to.have.lengthOf(1)
@@ -407,7 +411,7 @@ describe('ProtocolHandler - Players', () => {
 
     expect(response[0]).to.eql(MSG_PING)
     expect(Ping.validate(response)).to.be.true
-    expect(Ping.getPingId(response)).to.eql(0xDEADBEEF)
+    expect(Ping.getPingId(response)).to.eql(0xdeadbeef)
   })
 })
 

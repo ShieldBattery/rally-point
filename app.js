@@ -10,9 +10,7 @@ nconf.defaults({
   port: 14098,
 })
 
-nconf.required([
-  'secret',
-])
+nconf.required(['secret'])
 
 const server = createServer(nconf.get('host'), nconf.get('port'), nconf.get('secret'))
 setInterval(() => {

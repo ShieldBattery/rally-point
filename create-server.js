@@ -121,8 +121,10 @@ class Route {
 
   handleJoinSuccessAck(playerId, rinfo) {
     if (this.playerOneId === playerId) {
-      if (this.playerOneEndpoint.port !== rinfo.port ||
-          this.playerOneEndpoint.address !== rinfo.address) {
+      if (
+        this.playerOneEndpoint.port !== rinfo.port ||
+        this.playerOneEndpoint.address !== rinfo.address
+      ) {
         return
       }
       if (this.p1JoinResender) {
@@ -130,8 +132,10 @@ class Route {
         this.p1JoinResender = null
       }
     } else if (this.playerTwoId === playerId) {
-      if (this.playerTwoEndpoint.port !== rinfo.port ||
-          this.playerTwoEndpoint.address !== rinfo.address) {
+      if (
+        this.playerTwoEndpoint.port !== rinfo.port ||
+        this.playerTwoEndpoint.address !== rinfo.address
+      ) {
         return
       }
       if (this.p2JoinResender) {
@@ -147,8 +151,10 @@ class Route {
     }
 
     if (this.playerOneId === playerId) {
-      if (this.playerOneEndpoint.port !== rinfo.port ||
-          this.playerOneEndpoint.address !== rinfo.address) {
+      if (
+        this.playerOneEndpoint.port !== rinfo.port ||
+        this.playerOneEndpoint.address !== rinfo.address
+      ) {
         return false
       }
 
@@ -158,8 +164,10 @@ class Route {
         this.p1ReadyResender = null
       }
     } else if (this.playerTwoId === playerId) {
-      if (this.playerTwoEndpoint.port !== rinfo.port ||
-          this.playerTwoEndpoint.address !== rinfo.address) {
+      if (
+        this.playerTwoEndpoint.port !== rinfo.port ||
+        this.playerTwoEndpoint.address !== rinfo.address
+      ) {
         return false
       }
 
@@ -177,14 +185,18 @@ class Route {
 
   handleKeepAlive(playerId, rinfo) {
     if (this.playerOneId === playerId) {
-      if (this.playerOneEndpoint.port !== rinfo.port ||
-          this.playerOneEndpoint.address !== rinfo.address) {
+      if (
+        this.playerOneEndpoint.port !== rinfo.port ||
+        this.playerOneEndpoint.address !== rinfo.address
+      ) {
         return false
       }
       this.p1LastMessage = Date.now()
     } else if (this.playerTwoId === playerId) {
-      if (this.playerTwoEndpoint.port !== rinfo.port ||
-          this.playerTwoEndpoint.address !== rinfo.address) {
+      if (
+        this.playerTwoEndpoint.port !== rinfo.port ||
+        this.playerTwoEndpoint.address !== rinfo.address
+      ) {
         return false
       }
       this.p2LastMessage = Date.now()
@@ -215,11 +227,11 @@ class Failure {
 
 export class ProtocolHandler {
   // How long to wait before re-sending a packet (milliseconds)
-  static ACK_TIMEOUT = 500;
+  static ACK_TIMEOUT = 500
   // How many times to resend a packet before giving up
-  static MAX_RESENDS = 5;
+  static MAX_RESENDS = 5
   // How long a route can stay idle before it gets pruned (milliseconds)
-  static MAX_ROUTE_STALENESS = 10 * 60 * 1000;
+  static MAX_ROUTE_STALENESS = 10 * 60 * 1000
 
   // sendFn is function(msg, offset, length, port, address)
   constructor(secret, sendFn) {
@@ -320,8 +332,15 @@ export class ProtocolHandler {
     const playerTwo = CreateRoute.getPlayerTwoId(msg)
     const failureId = genId()
     const response = CreateRouteFailure.create(playerOne, playerTwo, failureId)
-    const failure = new Failure(failureId, rinfo, ProtocolHandler.ACK_TIMEOUT,
-        ProtocolHandler.MAX_RESENDS, response, this.send, () => this.failures.delete(failureId))
+    const failure = new Failure(
+      failureId,
+      rinfo,
+      ProtocolHandler.ACK_TIMEOUT,
+      ProtocolHandler.MAX_RESENDS,
+      response,
+      this.send,
+      () => this.failures.delete(failureId),
+    )
     this.failures.set(failureId, failure)
     failure.start()
   }
@@ -343,8 +362,14 @@ export class ProtocolHandler {
     this.routes.set(route.id, route)
 
     const response = CreateRouteSuccess.create(playerOne, playerTwo, route.id)
-    route.createResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
-        ProtocolHandler.MAX_RESENDS, rinfo, response, this.send, () => this.routes.delete(route.id))
+    route.createResender = new PacketResender(
+      ProtocolHandler.ACK_TIMEOUT,
+      ProtocolHandler.MAX_RESENDS,
+      rinfo,
+      response,
+      this.send,
+      () => this.routes.delete(route.id),
+    )
     route.createResender.start()
   }
 
@@ -390,8 +415,15 @@ export class ProtocolHandler {
     const routeId = JoinRoute.getRouteId(msg)
     const failureId = genId()
     const response = JoinRouteFailure.create(routeId, failureId)
-    const failure = new Failure(failureId, rinfo, ProtocolHandler.ACK_TIMEOUT,
-        ProtocolHandler.MAX_RESENDS, response, this.send, () => this.failures.delete(failureId))
+    const failure = new Failure(
+      failureId,
+      rinfo,
+      ProtocolHandler.ACK_TIMEOUT,
+      ProtocolHandler.MAX_RESENDS,
+      response,
+      this.send,
+      () => this.failures.delete(failureId),
+    )
     this.failures.set(failureId, failure)
     failure.start()
   }
@@ -416,8 +448,14 @@ export class ProtocolHandler {
     }
 
     const response = JoinRouteSuccess.create(routeId)
-    const resender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
-        ProtocolHandler.MAX_RESENDS, rinfo, response, this.send, () => {})
+    const resender = new PacketResender(
+      ProtocolHandler.ACK_TIMEOUT,
+      ProtocolHandler.MAX_RESENDS,
+      rinfo,
+      response,
+      this.send,
+      () => {},
+    )
     if (playerNum === 1) {
       route.p1JoinResender = resender
     } else {
@@ -427,10 +465,22 @@ export class ProtocolHandler {
 
     if (!wasConnected && route.connected) {
       const readyMsg = RouteReady.create(routeId)
-      route.p1ReadyResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
-          ProtocolHandler.MAX_RESENDS, route.playerOneEndpoint, readyMsg, this.send, () => {})
-      route.p2ReadyResender = new PacketResender(ProtocolHandler.ACK_TIMEOUT,
-          ProtocolHandler.MAX_RESENDS, route.playerTwoEndpoint, readyMsg, this.send, () => {})
+      route.p1ReadyResender = new PacketResender(
+        ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS,
+        route.playerOneEndpoint,
+        readyMsg,
+        this.send,
+        () => {},
+      )
+      route.p2ReadyResender = new PacketResender(
+        ProtocolHandler.ACK_TIMEOUT,
+        ProtocolHandler.MAX_RESENDS,
+        route.playerTwoEndpoint,
+        readyMsg,
+        this.send,
+        () => {},
+      )
       route.p1ReadyResender.start()
       route.p2ReadyResender.start()
     }
@@ -537,11 +587,14 @@ class Server {
 
     this.socket = dgram.createSocket('udp6')
     this.protocolHandler = new ProtocolHandler(secret, (msg, offset, length, port, address) =>
-        this.socket.send(msg, offset, length, port, address))
+      this.socket.send(msg, offset, length, port, address),
+    )
     this.socket.on('message', (msg, rinfo) => this.protocolHandler.onMessage(msg, rinfo))
 
     this.pruneInterval = setInterval(
-        () => this.protocolHandler.pruneRoutes(), 1.5 * ProtocolHandler.MAX_ROUTE_STALENESS)
+      () => this.protocolHandler.pruneRoutes(),
+      1.5 * ProtocolHandler.MAX_ROUTE_STALENESS,
+    )
   }
 
   get numRoutes() {
@@ -552,8 +605,7 @@ class Server {
     if (this.bound) return
 
     await new Promise((resolve, reject) => {
-      this.socket.once('listening', () => resolve())
-        .once('error', err => reject(err))
+      this.socket.once('listening', () => resolve()).once('error', err => reject(err))
       this.socket.bind({ address: this.host, port: this.port })
     })
 

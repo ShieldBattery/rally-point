@@ -6,7 +6,7 @@ const base = 36
 const discreteValues = Math.pow(base, blockSize)
 
 function random() {
-  return (Math.random() * discreteValues << 0).toString(base)
+  return ((Math.random() * discreteValues) << 0).toString(base)
 }
 
 let c = 0

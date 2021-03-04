@@ -12,8 +12,8 @@ import {
 const RESEND_TIMEOUT = 500
 
 function genPlayerId() {
-  const date = Date.now() & 0xFFF
-  const rand = Math.random() * 0xFFFFF
+  const date = Date.now() & 0xfff
+  const rand = Math.random() * 0xfffff
   return ((date << 20) | rand) >>> 0
 }
 
@@ -33,8 +33,7 @@ export default class RallyPointCreator {
     if (this.bound) return
 
     await new Promise((resolve, reject) => {
-      this.socket.once('listening', () => resolve())
-        .once('error', err => reject(err))
+      this.socket.once('listening', () => resolve()).once('error', err => reject(err))
       this.socket.bind({ address: this.host, port: this.port })
     })
 

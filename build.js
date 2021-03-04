@@ -4,8 +4,10 @@ const babel = require('babel-core')
 
 function babelify(project, file) {
   console.log('Babelifying ' + file + '...')
-  fs.writeFileSync(path.join(__dirname, project, file),
-      babel.transformFileSync(path.join(__dirname, file)).code)
+  fs.writeFileSync(
+    path.join(__dirname, project, file),
+    babel.transformFileSync(path.join(__dirname, file)).code,
+  )
 }
 
 // rally-point-server
