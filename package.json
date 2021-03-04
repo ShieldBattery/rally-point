@@ -8,11 +8,11 @@
     "node": ">= 14.0.0"
   },
   "scripts": {
-    "autotest": "mocha --watch -R spec --compilers js:babel-register --recursive test/",
+    "autotest": "mocha --watch -R spec --require @babel/register --recursive test/",
     "build": "node build.js",
     "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
     "posttest": "npm run lint",
-    "test": "mocha -R spec --compilers js:babel-register --recursive test/"
+    "test": "mocha -R spec --require @babel/register --recursive test/"
   },
   "repository": {
     "type": "git",
@@ -32,21 +32,21 @@
   },
   "homepage": "https://github.com/tec27/rally-point#readme",
   "dependencies": {
-    "babel-core": "^6.7.6",
-    "babel-polyfill": "^6.7.4",
-    "babel-preset-node6": "^11.0.0",
-    "babel-preset-stage-0": "^6.5.0",
-    "babel-register": "^6.7.2",
-    "nconf": "^0.8.4"
+    "@babel/core": "^7.13.8",
+    "@babel/plugin-proposal-class-properties": "^7.13.0",
+    "@babel/preset-env": "^7.13.9",
+    "@babel/register": "^7.13.8",
+    "core-js": "^3.9.1",
+    "nconf": "^0.11.2"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",
-    "chai": "^3.5.0",
+    "chai": "^4.3.3",
     "eslint": "^7.21.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-prettier": "^3.3.1",
-    "mocha": "^2.4.5",
+    "mocha": "^8.3.0",
     "prettier": "^2.2.1"
   }
 }
