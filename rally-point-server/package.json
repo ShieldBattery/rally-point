@@ -1,13 +1,12 @@
 {
   "name": "rally-point-server",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "create-server.js",
   "engines": {
-    "node": ">= 6.0.0"
+    "node": ">= 14.0.0"
   },
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/tec27/rally-point.git"
@@ -25,8 +24,6 @@
     "url": "https://github.com/tec27/rally-point/issues"
   },
   "homepage": "https://github.com/tec27/rally-point#readme",
-  "dependencies": {
-  },
-  "devDependencies": {
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }
