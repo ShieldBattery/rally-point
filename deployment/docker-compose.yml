@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  rally_point:
+    image: shieldbattery/rally-point:${RALLY_POINT_VERSION:-latest}
+    restart: always
+    # Required for proper handling of kernel signals (eg. ctrl-c); for more info, see:
+    # https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#handling-kernel-signals
+    init: true
+    ports:
+      - '14098:14098/udp'
+    environment:
+      - 'RP_HOST=::'
+      - SECRET=${SB_RALLY_POINT_SECRET}

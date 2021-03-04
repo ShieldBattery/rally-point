@@ -1,0 +1,8 @@
+.git/
+deployment/
+node_modules/
+rally-point-creator/
+rally-point-player/
+rally-point-server/
+config.json
+.env
