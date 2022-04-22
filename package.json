@@ -37,7 +37,7 @@
     "@babel/preset-env": "^7.13.9",
     "@babel/register": "^7.13.8",
     "core-js": "^3.9.1",
-    "nconf": "^0.11.2"
+    "nconf": "^0.11.4"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",
