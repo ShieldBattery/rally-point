@@ -1,0 +1,20 @@
+app = "rally-point-sea"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[env]
+  IS_FLY = true
+  RP_HOST = "fly-global-services"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+
+[[services]]
+  internal_port = 14098
+  processes = ["app"]
+  protocol = "udp"
+
+  [[services.ports]]
+    port = 14098

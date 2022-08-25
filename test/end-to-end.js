@@ -18,7 +18,7 @@ describe('Server and clients', function () {
   let routeCreator
   let players
   beforeEach(async () => {
-    server = createServer(HOST, SERVER_PORT, SECRET)
+    server = createServer(HOST, SERVER_PORT, SECRET, false)
     routeCreator = new RouteCreator(HOST, CREATOR_PORT, SECRET)
     players = []
 

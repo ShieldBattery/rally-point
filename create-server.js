@@ -579,13 +579,15 @@ export class ProtocolHandler {
 }
 
 class Server {
-  constructor(host, port, secret) {
+  constructor(host, port, secret, isFly) {
     this.host = host
     this.port = port
     this.secret = secret
     this.bound = false
 
-    this.socket = dgram.createSocket('udp6')
+    this.socket = dgram.createSocket({
+      type: isFly ? 'udp4' : 'udp6',
+    })
     this.protocolHandler = new ProtocolHandler(secret, (msg, offset, length, port, address) =>
       this.socket.send(msg, offset, length, port, address),
     )
@@ -627,6 +629,6 @@ class Server {
   }
 }
 
-export default function createServer(host, port, secret) {
-  return new Server(host, port, secret)
+export default function createServer(host, port, secret, isFly) {
+  return new Server(host, port, secret, isFly)
 }
