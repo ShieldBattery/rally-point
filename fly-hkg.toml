@@ -1,0 +1,15 @@
+app = "rally-point-hkg"
+primary_region = "hkg"
+processes = []
+
+[env]
+  IS_FLY = true
+  RP_HOST = "fly-global-services"
+
+[[services]]
+  internal_port = 14098
+  processes = ["app"]
+  protocol = "udp"
+
+  [[services.ports]]
+    port = 14098
