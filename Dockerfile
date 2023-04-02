@@ -1,4 +1,4 @@
-FROM node:16-alpine as builder
+FROM node:18-alpine as builder
 ENV NODE_ENV=production
 
 RUN npm install -g npm@7.x.x

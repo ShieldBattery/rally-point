@@ -16,11 +16,16 @@ nconf.defaults({
 
 nconf.required(['secret'])
 
+console.log(`Settings: {
+rp_host: ${nconf.get('rp_host')},
+is_fly: ${nconf.get('is_fly')},
+}`)
+
 const server = createServer(
   nconf.get('rp_host'),
   Number(nconf.get('rp_port')),
   nconf.get('secret'),
-  nconf.get('is_fly') === 't',
+  nconf.get('is_fly') === 'true',
 )
 setInterval(() => {
   console.log(`${server.numRoutes} routes active`)

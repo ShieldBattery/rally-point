@@ -6,3 +6,4 @@ rally-point-player/
 rally-point-server/
 config.json
 .env
+*.toml
