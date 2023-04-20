@@ -246,40 +246,48 @@ export class ProtocolHandler {
     if (msg.length < 1) return
 
     const type = msg.readUInt8(0)
-    switch (type) {
-      // Creator messages
-      case MSG_CREATE_ROUTE:
-        this._onCreateRoute(msg, rinfo)
-        break
-      case MSG_CREATE_ROUTE_SUCCESS_ACK:
-        this._onCreateRouteSuccessAck(msg, rinfo)
-        break
-      case MSG_CREATE_ROUTE_FAILURE_ACK:
-        this._onCreateRouteFailureAck(msg, rinfo)
-        break
+    try {
+      switch (type) {
+        // Creator messages
+        case MSG_CREATE_ROUTE:
+          this._onCreateRoute(msg, rinfo)
+          break
+        case MSG_CREATE_ROUTE_SUCCESS_ACK:
+          this._onCreateRouteSuccessAck(msg, rinfo)
+          break
+        case MSG_CREATE_ROUTE_FAILURE_ACK:
+          this._onCreateRouteFailureAck(msg, rinfo)
+          break
 
-      // Player messages
-      case MSG_JOIN_ROUTE:
-        this._onJoinRoute(msg, rinfo)
-        break
-      case MSG_JOIN_ROUTE_FAILURE_ACK:
-        this._onJoinRouteFailureAck(msg, rinfo)
-        break
-      case MSG_JOIN_ROUTE_SUCCESS_ACK:
-        this._onJoinRouteSuccessAck(msg, rinfo)
-        break
-      case MSG_ROUTE_READY_ACK:
-        this._onRouteReadyAck(msg, rinfo)
-        break
-      case MSG_FORWARD:
-        this._onForward(msg, rinfo)
-        break
-      case MSG_KEEP_ALIVE:
-        this._onKeepAlive(msg, rinfo)
-        break
-      case MSG_PING:
-        this._onPing(msg, rinfo)
-        break
+        // Player messages
+        case MSG_JOIN_ROUTE:
+          this._onJoinRoute(msg, rinfo)
+          break
+        case MSG_JOIN_ROUTE_FAILURE_ACK:
+          this._onJoinRouteFailureAck(msg, rinfo)
+          break
+        case MSG_JOIN_ROUTE_SUCCESS_ACK:
+          this._onJoinRouteSuccessAck(msg, rinfo)
+          break
+        case MSG_ROUTE_READY_ACK:
+          this._onRouteReadyAck(msg, rinfo)
+          break
+        case MSG_FORWARD:
+          this._onForward(msg, rinfo)
+          break
+        case MSG_KEEP_ALIVE:
+          this._onKeepAlive(msg, rinfo)
+          break
+        case MSG_PING:
+          this._onPing(msg, rinfo)
+          break
+      }
+    } catch (err) {
+      console.error(
+        `Error handling message [${type}] from ${rinfo.address}:${rinfo.port}: ${
+          err?.stack ?? err
+        }`,
+      )
     }
   }
 

@@ -3,12 +3,15 @@
     [
       "@babel/preset-env",
       {
-        "targets": { "node": "14.0" },
+        "targets": { "node": "16" },
         "useBuiltIns": "usage",
         "corejs": 3
       }
     ]
   ],
 
-  "plugins": [["@babel/plugin-proposal-class-properties", { "loose": true }]]
+  "plugins": [
+    ["@babel/plugin-proposal-class-properties", { "loose": true }],
+    ["@babel/plugin-proposal-private-property-in-object", { "loose": true }]
+  ]
 }
