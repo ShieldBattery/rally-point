@@ -1,5 +1,5 @@
-app = "rally-point-scl"
-primary_region = "scl"
+app = "rally-point-bog"
+primary_region = "bog"
 processes = []
 
 [env]
