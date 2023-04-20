@@ -1,11 +1,11 @@
 {
   "name": "rally-point",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "index.js",
   "engines": {
-    "node": ">= 14.0.0"
+    "node": ">= 16.0.0"
   },
   "scripts": {
     "autotest": "mocha --watch -R spec --require @babel/register --recursive test/",
