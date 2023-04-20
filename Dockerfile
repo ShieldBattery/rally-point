@@ -1,20 +1,20 @@
+# First stage
 FROM node:18-alpine as builder
 ENV NODE_ENV=production
 
-RUN npm install -g npm@7.x.x
-
-# Set the working directory to the home directory of the `node` user
-WORKDIR /home/node/rallypoint
-
-RUN chown node:node .
-
+WORKDIR /rallypoint
 # Copy the whole repository to the image, *except* the stuff marked in the `.dockerignore` file
-COPY --chown=node:node . .
+COPY . .
+RUN yarn
 
-# Set the user to `node` for any subsequent `RUN` and `CMD` instructions
+# Second stage
+FROM node:18-alpine
+ENV NODE_ENV=production
+
+WORKDIR /home/node/rallypoint
 USER node
 
-RUN npm install
+COPY --chown=node:node --from=builder /rallypoint .
 
 # rally-point protocol port
 EXPOSE 14098/udp
