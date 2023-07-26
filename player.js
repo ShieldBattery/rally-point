@@ -28,6 +28,14 @@ function getPingId() {
   return pingId
 }
 
+/**
+ * Returns a monotonically increasing number corresponding to a time in milliseconds.
+ */
+export function monotonicNow() {
+  const [seconds, nanos] = process.hrtime()
+  return seconds * 1000 + nanos / 1000000
+}
+
 const getRouteKey = (address, port, routeId) => `${address}:${port}|${routeId}`
 
 class RallyPointRoute extends EventEmitter {
@@ -130,7 +138,7 @@ export default class RallyPointPlayer {
           reject(new Error(`Ping to ${address}:${port} timed out`))
         }, PING_TIMEOUT)
 
-        this.pings.set(id, { address, port, start: Date.now(), resolve, timeoutId })
+        this.pings.set(id, { address, port, start: monotonicNow(), resolve, timeoutId })
         const packet = Ping.create(pingId)
         this.socket.send(packet, 0, packet.length, port, address)
       }).then(
@@ -279,7 +287,7 @@ export default class RallyPointPlayer {
     if (this.pings.has(id)) {
       const state = this.pings.get(id)
       if (state.address === rinfo.address && state.port === rinfo.port) {
-        const time = Date.now() - state.start
+        const time = monotonicNow() - state.start
         this.pings.delete(id)
         clearTimeout(state.timeoutId)
         state.resolve(time)
