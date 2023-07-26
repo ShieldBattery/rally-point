@@ -1,10 +1,10 @@
 {
   "name": "rally-point-player",
-  "version": "2.0.0",
+  "version": "2.2.1",
   "description": "A client for rally-point-server that can send packets using created routes.",
   "main": "player.js",
   "engines": {
-    "node": ">= 14.0.0"
+    "node": ">= 16.0.0"
   },
   "scripts": {},
   "repository": {
