@@ -1,7 +1,7 @@
 {
   "name": "rally-point",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "index.js",
   "engines": {
@@ -41,6 +41,7 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.21.3",
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "chai": "^4.3.3",
     "eslint": "^8.45.0",
     "eslint-config-prettier": "^8.1.0",
