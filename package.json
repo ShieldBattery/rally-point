@@ -33,12 +33,12 @@
   },
   "homepage": "https://github.com/tec27/rally-point#readme",
   "dependencies": {
-    "nconf": "^0.11.4"
+    "nconf": "^0.12.1"
   },
   "devDependencies": {
-    "chai": "^4.3.3",
+    "chai": "^5.1.1",
     "eslint": "^8.45.0",
-    "eslint-config-prettier": "^8.1.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.0",
     "mocha": "^10.1.0",
     "prettier": "^3.0.0"
