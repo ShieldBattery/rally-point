@@ -1,6 +1,6 @@
 export interface RallyPointServer {
   get numRoutes(): number
-  async bind(): Promise<void>
+  bind(): Promise<void>
   close(): void
   addErrorHandler(fn: (err: Error) => void): void
   removeErrorHandler(fn: (err: Error) => void): void
