@@ -31,7 +31,7 @@ function getPingId() {
 /**
  * Returns a monotonically increasing number corresponding to a time in milliseconds.
  */
-export function monotonicNow() {
+function monotonicNow() {
   const [seconds, nanos] = process.hrtime()
   return seconds * 1000 + nanos / 1000000
 }
@@ -79,7 +79,7 @@ class RallyPointRoute extends EventEmitter {
   }
 }
 
-export default class RallyPointPlayer {
+export class RallyPointPlayer {
   constructor(host, port) {
     this.host = host
     this.port = port
@@ -318,3 +318,5 @@ export default class RallyPointPlayer {
     }
   }
 }
+
+export default RallyPointPlayer

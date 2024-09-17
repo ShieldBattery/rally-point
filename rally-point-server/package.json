@@ -4,6 +4,7 @@
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "create-server.js",
   "type": "module",
+  "types": "types.d.ts",
   "engines": {
     "node": ">= 20.0.0"
   },
