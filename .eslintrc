@@ -1,10 +1,9 @@
 {
-  "parser": "@babel/eslint-parser",
   "parserOptions": {
     "ecmaVersion": 2023,
     "sourceType": "module"
   },
-  "plugins": ["babel", "prettier"],
+  "plugins": ["prettier"],
 
   "env": {
     "browser": false,
@@ -187,11 +186,6 @@
     "vars-on-top": 0,
     "wrap-iife": [2, "any"],
     "wrap-regex": 0,
-    "yoda": 0,
-
-    "babel/block-scoped-var": 0,
-    "babel/generator-star": 0,
-    "babel/new-cap": [2, { "newIsCap": true, "capIsNew": false }],
-    "babel/space-in-brackets": 0
+    "yoda": 0
   }
 }
