@@ -1,6 +1,6 @@
 {
   "name": "rally-point-server",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "create-server.js",
   "type": "module",
