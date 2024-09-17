@@ -3,8 +3,9 @@
   "version": "2.2.1",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "create-server.js",
+  "type": "module",
   "engines": {
-    "node": ">= 16.0.0"
+    "node": ">= 20.0.0"
   },
   "scripts": {},
   "repository": {

@@ -25,9 +25,9 @@ import {
   MSG_PING,
   MSG_RECEIVE,
   MSG_ROUTE_READY,
-} from '../packets'
+} from '../packets.js'
 
-import { ProtocolHandler } from '../create-server'
+import { ProtocolHandler } from '../create-server.js'
 
 const SECRET = 'hell0w0rld'
 const CREATOR_RINFO = {

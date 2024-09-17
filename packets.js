@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import * as crypto from 'node:crypto'
 
 function sign(secret, buf) {
   return crypto.createHmac('sha256', secret).update(buf).digest()

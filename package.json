@@ -4,15 +4,16 @@
   "version": "2.2.1",
   "description": "A server for forwarding UDP packets between two peers.",
   "main": "index.js",
+  "type": "module",
   "engines": {
-    "node": ">= 16.0.0"
+    "node": ">= 20.0.0"
   },
   "scripts": {
-    "autotest": "mocha --watch -R spec --require @babel/register --recursive test/",
+    "autotest": "mocha --watch -R spec --recursive test/",
     "build": "node build.js",
     "lint": "eslint --ext .js ./ && echo Hooray || echo Please fix",
     "posttest": "npm run lint",
-    "test": "mocha -R spec --require @babel/register --recursive test/"
+    "test": "mocha -R spec --recursive test/"
   },
   "repository": {
     "type": "git",
@@ -49,5 +50,6 @@
     "eslint-plugin-prettier": "^5.0.0",
     "mocha": "^10.1.0",
     "prettier": "^3.0.0"
-  }
+  },
+  "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }

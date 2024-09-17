@@ -1,4 +1,4 @@
-import dgram from 'dgram'
+import * as dgram from 'dgram'
 import {
   CreateRoute,
   CreateRouteFailure,
@@ -25,8 +25,8 @@ import {
   MSG_KEEP_ALIVE,
   MSG_PING,
   MSG_ROUTE_READY_ACK,
-} from './packets'
-import genId from './gen-id'
+} from './packets.js'
+import genId from './gen-id.js'
 
 class PacketResender {
   constructor(timeout, maxResends, rinfo, packetData, sendFn, onFailure) {

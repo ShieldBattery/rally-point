@@ -1,8 +1,8 @@
 import { expect } from 'chai'
 
-import createServer from '../create-server'
-import RouteCreator from '../route-creator'
-import Player from '../player'
+import createServer from '../create-server.js'
+import RouteCreator from '../route-creator.js'
+import Player from '../player.js'
 
 const SECRET = 'hell0w0rld'
 const HOST = '::1'

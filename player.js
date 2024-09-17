@@ -1,4 +1,4 @@
-import dgram from 'dgram'
+import * as dgram from 'node:dgram'
 import { EventEmitter } from 'events'
 import {
   Forward,

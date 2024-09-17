@@ -1,4 +1,4 @@
-import dgram from 'dgram'
+import * as dgram from 'node:dgram'
 import {
   CreateRoute,
   CreateRouteSuccess,
@@ -7,7 +7,7 @@ import {
   CreateRouteFailureAck,
   MSG_CREATE_ROUTE_SUCCESS,
   MSG_CREATE_ROUTE_FAILURE,
-} from './packets'
+} from './packets.js'
 
 const RESEND_TIMEOUT = 500
 
@@ -17,7 +17,7 @@ function genPlayerId() {
   return ((date << 20) | rand) >>> 0
 }
 
-export default class RallyPointCreator {
+export class RallyPointCreator {
   constructor(host, port, secret) {
     this.host = host
     this.port = port
@@ -159,3 +159,5 @@ export default class RallyPointCreator {
     }
   }
 }
+
+export default RallyPointCreator

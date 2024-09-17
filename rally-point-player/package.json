@@ -3,8 +3,9 @@
   "version": "2.2.1",
   "description": "A client for rally-point-server that can send packets using created routes.",
   "main": "player.js",
+  "type": "module",
   "engines": {
-    "node": ">= 16.0.0"
+    "node": ">= 20.0.0"
   },
   "scripts": {},
   "repository": {
