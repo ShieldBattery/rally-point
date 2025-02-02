@@ -1,10 +1,12 @@
 import nconf from 'nconf'
 import * as path from 'node:path'
 import createServer from './create-server.js'
+import { fileURLToPath } from 'node:url'
 
+const configDir = path.dirname(fileURLToPath(import.meta.url))
 nconf.env({ lowerCase: true })
 nconf.argv()
-nconf.file(path.join(__dirname, 'config.json'))
+nconf.file(path.join(configDir, 'config.json'))
 nconf.defaults({
   // eslint-disable-next-line camelcase
   rp_host: '::1',
@@ -27,9 +29,12 @@ const server = createServer(
   nconf.get('secret'),
   nconf.get('is_fly') === 'true',
 )
-setInterval(() => {
-  console.log(`${server.numRoutes} routes active`)
-}, 5 * 60 * 1000)
+setInterval(
+  () => {
+    console.log(`${server.numRoutes} routes active`)
+  },
+  5 * 60 * 1000,
+)
 server.bind().then(
   () => {
     console.log(`listening on ${server.host}:${server.port}`)
